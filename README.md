@@ -1,37 +1,84 @@
-# AI-Tripod  
-大模型集成训练平台（React + Python + Django）  
+# AI_Tripod_backend — Django 后端骨架
 
+此仓库为小组协作搭建的 Django 后端骨架，参考 LLaMA-Factory 的后端设计思路，提供：
 
-在人工智能技术飞速迭代的当下，如何高效实现大规模模型的训练与部署，加速AI技术的普及落地，已成为科技领域的核心探索方向。  
+- 一个轻量的 Django 项目骨架（`ai_tripod_backend`）。
+- API 子应用（基于 Django REST framework 风格的接口骨架）。
+- 训练模块骨架（`train`），包含运行入口 `run_train.py` 与管理命令示例。
+- WebUI 模块骨架（`webui`），可与 Gradio 集成。
+- `ChatModel` 抽象：统一模型加载与推理接口，便于后续替换具体引擎。
 
-AI-Tripod 作为面向企业与开发者的大模型集成训练平台，致力于提供一站式服务——从模型训练、优化到在线部署，支持多类开源大模型快速接入与适配。通过简化操作流程、灵活配置资源，平台旨在帮助用户高效完成大模型的训练与推理任务，降低AI技术应用门槛。  
+快速开始（使用 Conda 推荐流程）
+-------------------------------
 
+推荐使用 Conda 管理 Python 环境，以便更方便地安装 PyTorch / CUDA 相关包并避免依赖冲突。
 
-## 核心功能与运行机制  
+1) 创建并激活 Conda 环境（推荐 Python 3.10）：
 
-### 1. 多模型集成与灵活配置  
-平台深度整合多种神经网络的训练与推理能力，覆盖大语言模型（如LLaMA、Qwen）、视觉模型（如YOLO）等主流类型。用户可通过直观的Web界面完成全流程配置：选择基础模型、上传或关联数据集、指定显卡资源、设置batch size、epoch等参数，一键启动训练或推理任务（参考LLaMA-Factory的轻量化交互逻辑，优化用户体验）。  
+```bash
+# 使用 environment.yml 创建
+conda env create -f environment.yml
+conda activate ai_tripod_backend
+```
 
+2) 安装 PyTorch（按你的硬件选择官方安装命令）
 
-### 2. 精细化资源调度与权限管理  
-支持多卡环境下的显卡资源灵活选择，满足不同规模的训练需求。系统管理员可基于用户角色精细化配置权限：例如限制特定用户仅使用指定显卡（如显卡2、3），或仅允许启动大语言模型微调任务，确保资源高效分配与安全管控。  
+```bash
+# CPU-only 示例
+pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision
 
+# CUDA 示例 (按 CUDA 版本替换 cu116/cu118 等)：
+# pip install --index-url https://download.pytorch.org/whl/cu118 torch torchvision
+```
 
-### 3. 实时监控与全链路日志管理  
-提供可视化任务监控面板，用户可实时查看训练进度、loss曲线等关键指标，动态掌握任务状态。同时支持日志自动记录、导出与分析功能，为训练后的模型调优与问题排查提供完整数据支撑。  
+3) 安装其它可选依赖：
 
+```bash
+pip install -r requirements.txt
+```
 
-### 4. 高效数据管理与预处理支持  
-针对多源异构数据的复杂性，平台内置数据预处理工具，支持定制化处理规则；同时兼容用户上传的标准化数据集，实现“即传即用”，兼顾灵活性与效率。  
+4) 数据库迁移（第一次运行）并启动开发服务器：
 
+```bash
+python manage.py migrate
+python manage.py runserver 0.0.0.0:8000
+```
 
-### 5. 可扩展的演进路径  
-一期聚焦核心需求，实现多模型训练、推理等基础功能；后期将逐步拓展商业价值，提供有偿增值服务，如高性能计算资源租用、专业模型优化咨询等，构建可持续的服务生态。  
+5) 使用 ASGI/uvicorn（推荐用于生产测试或与反向代理配合）：
 
+```bash
+uvicorn ai_tripod_backend.asgi:application --host 0.0.0.0 --port 8000
+```
 
-## 技术栈  
-前端基于React构建交互界面，后端采用Python + Django架构，确保系统稳定性与扩展性。  
+6) 启动 WebUI (Gradio) demo（本仓库包含一个最小 Gradio demo，调用本地 `ChatModel`）：
 
+```bash
+python run_webui.py
+```
 
-## 参考与对标  
-借鉴LLaMA-Factory的轻量化训练逻辑、阿里PAI与百度千帆平台的企业级服务经验，AI-Tripod旨在平衡易用性与专业性，为用户打造高效、灵活、安全的大模型训练环境，助力AI技术快速落地与创新。
+7) 运行训练入口（示例）：
+
+```bash
+# 优先使用 Django 管理命令
+python manage.py run_train --config path/to/config.yaml
+
+# 或直接使用脚本（会在 Django 不可用时 fallback）
+python run_train.py
+```
+
+项目结构与说明
+--------------
+
+- `ai_tripod_backend/` - Django 项目配置（settings, urls, asgi, wsgi）。
+- `ai_tripod_backend/api/` - API 子应用，包含 `views.py`、`urls.py` 等。
+- `ai_tripod_backend/train/` - 训练子应用，包含训练 runner 与管理命令示例。
+- `ai_tripod_backend/webui/` - Web UI 子应用，和 Gradio 集成入口。
+- `ai_tripod_backend/chat.py` - `ChatModel` 抽象，模拟 LLaMA-Factory 中的模型抽象层。
+
+后续工作建议
+------------
+
+- 将 `ChatModel` 与真实的 Transformers / vLLM / modelscope 集成。
+- 在 `api` 中添加鉴权、速率限制与监控中间件。
+- 为 `train` 补充实际的训练逻辑（参考 LLaMA-Factory 的 `train` 目录）。
+- 在 CI 中添加 lint、测试与 basic smoke tests。
