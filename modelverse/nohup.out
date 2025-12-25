@@ -1,0 +1,42 @@
+INFO:huggingface_utils:当前使用的HuggingFace端点: https://hf-mirror.com
+INFO:huggingface_utils:使用环境变量配置端点: https://hf-mirror.com
+INFO:huggingface_utils:已修改huggingface_hub.constants.ENDPOINT: https://hf-mirror.com -> https://hf-mirror.com
+INFO:huggingface_utils:已修改huggingface_hub常量 INFERENCE_CATALOG_ENDPOINT: https://endpoints.huggingface.co/api/catalog -> https://endpoints.hf-mirror.com/api/catalog
+INFO:huggingface_utils:已修改huggingface_hub常量 INFERENCE_ENDPOINT: https://api-inference.huggingface.co -> https://api-inference.hf-mirror.com
+INFO:huggingface_utils:已修改huggingface_hub常量 _HF_DEFAULT_ENDPOINT: https://huggingface.co -> https://hf-mirror.com
+INFO:huggingface_utils:已修改huggingface_hub常量 _HF_DEFAULT_STAGING_ENDPOINT: https://hub-ci.huggingface.co -> https://hub-ci.hf-mirror.com
+INFO:huggingface_utils:============= 网络连接测试 =============
+INFO:huggingface_utils:✓ 可以连接到 OFFICIAL: https://huggingface.co
+INFO:huggingface_utils:✓ 可以连接到 MODELSCOPE: https://modelscope.cn/huggingface
+INFO:huggingface_utils:✓ 可以连接到 MIRROR_CN: https://hf-mirror.com
+INFO:huggingface_utils:✓ DNS解析 hf-mirror.com -> 160.16.86.14
+INFO:huggingface_utils:========================================
+INFO:huggingface_utils:============ HuggingFace配置信息 ============
+INFO:huggingface_utils:huggingface_hub版本: 0.36.0
+INFO:huggingface_utils:环境变量HF_ENDPOINT: https://hf-mirror.com
+INFO:huggingface_utils:环境变量HF_HUB_ENABLE_HF_TRANSFER: 0
+INFO:huggingface_utils:huggingface_hub.constants.ENDPOINT = https://hf-mirror.com
+INFO:huggingface_utils:huggingface_hub.constants.ENDPOINT = https://hf-mirror.com
+INFO:huggingface_utils:huggingface_hub.constants.HUGGINGFACE_HEADER_X_XET_ENDPOINT = X-Xet-Cas-Url
+INFO:huggingface_utils:huggingface_hub.constants.INFERENCE_CATALOG_ENDPOINT = https://endpoints.hf-mirror.com/api/catalog
+INFO:huggingface_utils:huggingface_hub.constants.INFERENCE_ENDPOINT = https://api-inference.hf-mirror.com
+INFO:huggingface_utils:huggingface_hub.constants.INFERENCE_ENDPOINTS_ENDPOINT = https://api.endpoints.huggingface.cloud/v2
+INFO:huggingface_utils:huggingface_hub.constants._HF_DEFAULT_ENDPOINT = https://hf-mirror.com
+INFO:huggingface_utils:huggingface_hub.constants._HF_DEFAULT_STAGING_ENDPOINT = https://hub-ci.hf-mirror.com
+INFO:huggingface_utils:hf_transfer已安装，版本: 0.1.9
+INFO:huggingface_utils:测试镜像站连接...
+INFO:huggingface_utils:连接到 https://hf-mirror.com 成功，状态码: 200
+INFO:huggingface_utils:=========================================
+INFO:     Started server process [14705]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8888 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [14705]
+✅ NumExpr已优化: 使用 16 个线程
+正在测试网络连通性...
+镜像站连通性测试成功: https://hf-mirror.com
+选择的端点: https://hf-mirror.com (镜像站)
+当前huggingface_hub版本: 0.36.0
