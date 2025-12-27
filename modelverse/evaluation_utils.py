@@ -18,7 +18,7 @@ import random
 import traceback
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from datasets import load_dataset
+import re
 
 # 配置日志
 logger = logging.getLogger(__name__)
@@ -46,6 +46,87 @@ SUPPORTED_DATASETS = {
         "url": "https://huggingface.co/datasets/cais/mmlu"
     }
 }
+
+
+def _pick_best_gpu_by_free_memory() -> Optional[Tuple[int, float, float]]:
+    """返回空闲显存最多的 GPU (id, free_gb, total_gb)。失败则返回 None。"""
+    try:
+        cmd = [
+            "nvidia-smi",
+            "--query-gpu=memory.free,memory.total",
+            "--format=csv,noheader,nounits",
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            best: Optional[Tuple[int, float, float]] = None
+            for idx, line in enumerate(result.stdout.strip().splitlines()):
+                if not line.strip():
+                    continue
+                parts = [p.strip() for p in line.split(",")]
+                if len(parts) < 2:
+                    continue
+                free_gb = float(parts[0]) / 1024
+                total_gb = float(parts[1]) / 1024
+                if best is None or free_gb > best[1]:
+                    best = (idx, free_gb, total_gb)
+            return best
+    except Exception:
+        pass
+
+    try:
+        if torch.cuda.is_available() and torch.cuda.device_count() > 0:
+            best = None
+            for i in range(torch.cuda.device_count()):
+                free_b, total_b = torch.cuda.mem_get_info(i)
+                free_gb = free_b / 1024 / 1024 / 1024
+                total_gb = total_b / 1024 / 1024 / 1024
+                if best is None or free_gb > best[1]:
+                    best = (i, free_gb, total_gb)
+            return best
+    except Exception:
+        pass
+
+    return None
+
+
+def _clear_corrupt_mmlu_cache_from_error(err_text: str) -> bool:
+    """从异常文本中提取 cais___mmlu 路径并清理对应缓存目录。"""
+    if not err_text:
+        return False
+
+    # 兼容形如 "Failed to open local file '/path/.../cais___mmlu/.../file.arrow'" 的信息
+    m = re.search(r"['\"](/[^'\"]*cais___mmlu[^'\"]*)['\"]", err_text)
+    if not m:
+        return False
+    p = Path(m.group(1))
+    try:
+        for parent in [p] + list(p.parents):
+            if parent.name == "cais___mmlu":
+                if parent.exists():
+                    shutil.rmtree(parent)
+                    return True
+                break
+    except Exception:
+        return False
+    return False
+
+
+def _load_mmlu_dataset(cache_dir: str, *, force_redownload: bool = False):
+    """加载 MMLU 数据集（all 配置），并在缓存损坏时支持强制重下。"""
+    from datasets import load_dataset
+    try:
+        from datasets import DownloadMode
+        download_mode = DownloadMode.FORCE_REDOWNLOAD if force_redownload else DownloadMode.REUSE_DATASET_IF_EXISTS
+    except Exception:
+        download_mode = "force_redownload" if force_redownload else "reuse_dataset_if_exists"
+
+    # 显式传 cache_dir，避免受全局 HF_HOME/HF_DATASETS_CACHE 的影响
+    return load_dataset(
+        "cais/mmlu",
+        "all",
+        cache_dir=cache_dir,
+        download_mode=download_mode,
+    )
 
 # 在配置部分添加默认配置常量
 MMLU_EVALUATION_CONFIG = {
@@ -99,26 +180,34 @@ def download_dataset(dataset_id: str, mirror: bool = True) -> Tuple[bool, str]:
     dataset_info = SUPPORTED_DATASETS[dataset_id]
     
     try:
+        # datasets 新版本已不支持 trust_remote_code；若外部环境或旧代码设置过相关开关，需在此显式清理
+        os.environ.pop("HF_DATASETS_TRUST_REMOTE_CODE", None)
+        os.environ.pop("TRANSFORMERS_TRUST_REMOTE_CODE", None)
+
         # 设置环境变量
         os.environ["HF_DATASETS_CACHE"] = cache_dir
-        os.environ["HF_DATASETS_TRUST_REMOTE_CODE"] = "1"
-        os.environ["TRANSFORMERS_TRUST_REMOTE_CODE"] = "1"
         
         # 如果使用镜像
         if mirror:
             os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
         
         # 使用datasets库加载数据集
-        from datasets import load_dataset
-        
-        logger.info(f"开始下载数据集: {dataset_info['hf_path']}")
+        logger.info(f"开始下载数据集: {dataset_info['hf_path']} (cache_dir={cache_dir})")
         
         # 加载数据集（会自动缓存）
         # 对于MMLU，使用'all'配置
         if dataset_id == "mmlu":
-            dataset = load_dataset(dataset_info['hf_path'], "all", trust_remote_code=True)
+            try:
+                dataset = _load_mmlu_dataset(cache_dir)
+            except Exception as e:
+                # 缓存损坏时清理并重试一次
+                if _clear_corrupt_mmlu_cache_from_error(str(e)):
+                    dataset = _load_mmlu_dataset(cache_dir, force_redownload=True)
+                else:
+                    dataset = _load_mmlu_dataset(cache_dir, force_redownload=True)
         else:
-            dataset = load_dataset(dataset_info['hf_path'], trust_remote_code=True)
+            from datasets import load_dataset
+            dataset = load_dataset(dataset_info['hf_path'], cache_dir=cache_dir)
         
         # 触发下载
         if isinstance(dataset, dict):
@@ -427,57 +516,49 @@ def run_mmlu_evaluation(task_id: int, model_path: str, output_dir: str, cache_di
         
         # 设置环境变量
         os.environ["TOKENIZERS_PARALLELISM"] = "false"
-        os.environ["HF_DATASETS_TRUST_REMOTE_CODE"] = "1"
-        os.environ["TRANSFORMERS_TRUST_REMOTE_CODE"] = "1"
         os.environ["HF_DATASETS_CACHE"] = cache_dir
+
+        # 清理可能来自外部环境/旧版本逻辑的 trust_remote_code 开关，避免 datasets 直接报错
+        os.environ.pop("HF_DATASETS_TRUST_REMOTE_CODE", None)
+        os.environ.pop("TRANSFORMERS_TRUST_REMOTE_CODE", None)
         
         # 设置随机种子
         random_module.seed(42)
         np.random.seed(42)
         
         # 导入必要的库
-        from datasets import load_dataset
         from transformers import AutoModelForCausalLM, AutoTokenizer
         
         # 加载模型和分词器
         add_evaluation_log(task_id, "加载模型和分词器...")
         
-        # 检查GPU内存并选择合适的配置
+        # 检查可用 GPU 空闲显存，过低则直接回退 CPU，避免共享卡环境下频繁失败
         import torch
         try:
-            if torch.cuda.is_available():
-                gpu_memory = torch.cuda.get_device_properties(0).total_memory / (1024**3)  # GB
-                add_evaluation_log(task_id, f"检测到GPU内存: {gpu_memory:.1f} GB")
+            best_gpu = _pick_best_gpu_by_free_memory() if torch.cuda.is_available() else None
+            min_free_gb = float(config.get("min_free_gpu_gb", 2.0))
+            if best_gpu is not None and best_gpu[1] >= min_free_gb:
+                gpu_id, free_gb, total_gb = best_gpu
+                add_evaluation_log(task_id, f"选择GPU {gpu_id} (free≈{free_gb:.2f}GB / total≈{total_gb:.2f}GB)")
                 
                 # 根据GPU内存选择加载策略
                 model_kwargs = {
                     "trust_remote_code": True,
                     "low_cpu_mem_usage": True,
                 }
-                
-                if gpu_memory < 8:  # 小于8GB使用更激进的优化
-                    add_evaluation_log(task_id, "GPU内存较小，使用量化和CPU卸载优化")
-                    model_kwargs.update({
-                        "torch_dtype": torch.float16,
-                        "device_map": "auto",
-                        "load_in_8bit": True,  # 8位量化
-                        "max_memory": {0: f"{int(gpu_memory * 0.8)}GB", "cpu": "16GB"}
-                    })
-                elif gpu_memory < 16:  # 8-16GB使用中等优化
-                    add_evaluation_log(task_id, "GPU内存中等，使用半精度优化")
-                    model_kwargs.update({
-                        "torch_dtype": torch.bfloat16,
-                        "device_map": "auto",
-                        "max_memory": {0: f"{int(gpu_memory * 0.9)}GB", "cpu": "8GB"}
-                    })
-                else:  # 大于16GB使用标准配置
-                    add_evaluation_log(task_id, "GPU内存充足，使用标准配置")
-                    model_kwargs.update({
-                        "torch_dtype": torch.bfloat16,
-                        "device_map": "auto"
-                    })
+
+                # 按“空闲显存”设定上限，避免 accelerate 误用总显存导致分配失败
+                gpu_budget_gb = max(0.5, free_gb * 0.9)
+                model_kwargs.update({
+                    "torch_dtype": torch.bfloat16,
+                    "device_map": "auto",
+                    "max_memory": {gpu_id: f"{int(gpu_budget_gb)}GiB", "cpu": "32GiB"},
+                })
             else:
-                add_evaluation_log(task_id, "未检测到GPU，使用CPU模式")
+                if best_gpu is not None:
+                    add_evaluation_log(task_id, f"GPU空闲显存不足 (best free≈{best_gpu[1]:.2f}GB < {min_free_gb}GB)，使用CPU模式")
+                else:
+                    add_evaluation_log(task_id, "未检测到GPU，使用CPU模式")
                 model_kwargs = {
                     "torch_dtype": torch.float32,
                     "device_map": "cpu",
@@ -520,11 +601,20 @@ def run_mmlu_evaluation(task_id: int, model_path: str, output_dir: str, cache_di
             )
             add_evaluation_log(task_id, "模型已在CPU模式下加载")
         
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_path,
-            use_fast=True,
-            trust_remote_code=True
-        )
+        # transformers 新版本对部分 tokenizer 会提示 mistral regex 问题；这里尽量开启修复
+        try:
+            tokenizer = AutoTokenizer.from_pretrained(
+                model_path,
+                use_fast=True,
+                trust_remote_code=True,
+                fix_mistral_regex=True,
+            )
+        except TypeError:
+            tokenizer = AutoTokenizer.from_pretrained(
+                model_path,
+                use_fast=True,
+                trust_remote_code=True,
+            )
         
         # 确保tokenizer有pad_token，避免警告
         if tokenizer.pad_token is None:
@@ -850,7 +940,13 @@ def run_mmlu_evaluation(task_id: int, model_path: str, output_dir: str, cache_di
         
         # 加载MMLU数据集
         add_evaluation_log(task_id, "加载MMLU数据集...")
-        dataset = load_dataset("cais/mmlu", "all", trust_remote_code=True)
+        try:
+            dataset = _load_mmlu_dataset(cache_dir)
+        except Exception as e:
+            # 常见：缓存损坏导致缺失 arrow 文件；清理后强制重下
+            add_evaluation_log(task_id, f"加载MMLU失败，尝试清理缓存并重试: {str(e)}", "WARNING")
+            _clear_corrupt_mmlu_cache_from_error(str(e))
+            dataset = _load_mmlu_dataset(cache_dir, force_redownload=True)
         
         # 获取多个MMLU子集
         subjects = list(dataset.keys())
@@ -1288,8 +1384,8 @@ def run_evaluation(task_id: int):
         if success:
             add_evaluation_log(task_id, f"数据集准备: {message}")
         else:
-            add_evaluation_log(task_id, f"数据集准备失败: {message}", "WARNING")
-            # 即使数据集准备失败，也继续评估，因为评估脚本会自动下载
+            add_evaluation_log(task_id, f"数据集准备失败: {message}", "ERROR")
+            raise RuntimeError(message)
         
         # 使用Hugging Face评估
         add_evaluation_log(task_id, f"使用Hugging Face进行{evaluation_method}评估...")

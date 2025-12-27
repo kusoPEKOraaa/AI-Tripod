@@ -87,6 +87,9 @@ const App = {
             '/profile': { handler: () => Pages.profile.render() },
             '/admin': { handler: () => Pages.admin.render() }
         });
+
+        // 首次渲染：注册完路由后立刻处理当前 hash
+        router.handleRoute();
     },
     
     // 配置用户菜单

@@ -11,7 +11,7 @@ class Router {
         
         // 监听 hash 变化
         window.addEventListener('hashchange', () => this.handleRoute());
-        window.addEventListener('load', () => this.handleRoute());
+        // 首次渲染由应用入口在路由注册完成后触发，避免刷新时的竞态导致白屏
     }
     
     // 注册路由

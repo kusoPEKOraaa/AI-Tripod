@@ -53,6 +53,9 @@ source .venv/bin/activate
 pip install -r requirements-all.txt
 ```
 
+> 说明：如果安装过程中出现 `protobuf` 与 `opentelemetry-*` 或 `oumi` 的版本冲突，通常是因为某些组件对 `protobuf` 的主版本要求不同。
+> 当前推荐使用 `protobuf>=6.32,<7`（满足 oumi），并允许 pip 选择与之兼容的 `opentelemetry-*` 版本。
+
 #### 方式二：使用 PyTorch 官方源安装 (CUDA 12.8)
 
 ```bash
@@ -68,8 +71,8 @@ pip install "oumi[gpu]==0.6.0"
 # 安装 vLLM (推理引擎) - 必须使用与 PyTorch 兼容的版本
 pip install "vllm==0.10.2"
 
-# 修复 protobuf 版本 (oumi 需要)
-pip install "protobuf>=6.32"
+# protobuf (oumi 需要)
+pip install "protobuf>=6.32,<7"
 ```
 
 #### 方式二：使用国内镜像源
@@ -84,7 +87,7 @@ pip install "oumi[gpu]==0.6.0" -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 pip install "vllm==0.10.2" -i https://pypi.tuna.tsinghua.edu.cn/simple
 
-pip install "protobuf>=6.32" -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip install "protobuf>=6.32,<7" -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
 ### 4. 配置环境变量（可选，推荐国内用户）
@@ -142,7 +145,7 @@ uvicorn main:app --host 0.0.0.0 --port 8888
 | accelerate | 1.12.0 | 分布式训练加速 |
 | datasets | 4.4.2 | 数据集管理 |
 | evaluate | 0.4.6 | 模型评估 |
-| protobuf | 6.33.2 | Protocol Buffers |
+| protobuf | >=6.32,<7 | Protocol Buffers |
 
 ---
 
@@ -220,7 +223,7 @@ python -c "import torch; print(torch.version.cuda)"
 
 ```bash
 # oumi 需要 protobuf >= 6.32
-pip install "protobuf>=6.32"
+pip install "protobuf>=6.32,<7"
 ```
 
 ### 4. HuggingFace 下载慢

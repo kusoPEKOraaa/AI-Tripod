@@ -905,8 +905,15 @@ const Pages = {
                 });
                 
                 // 添加助手回复
-                if (response && response.content) {
-                    this.addMessage('assistant', response.content);
+                const assistantContent =
+                    (response && response.message && response.message.content) ||
+                    (response && response.content) ||
+                    (response && response.choices && response.choices[0] && response.choices[0].message && response.choices[0].message.content);
+
+                if (assistantContent) {
+                    this.addMessage('assistant', assistantContent);
+                } else {
+                    Utils.toast.error('未获取到模型回复（响应格式不匹配）');
                 }
             } catch (error) {
                 Utils.toast.error('发送失败: ' + error.message);

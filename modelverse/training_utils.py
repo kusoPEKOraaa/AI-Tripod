@@ -90,12 +90,55 @@ def generate_training_config(task: TrainingTask) -> str:
         config["model"]["load_pretrained_weights"] = False
     
     # data部分
+    #
+    # NOTE: TRL 的 SFTTrainer 默认会从 `dataset_text_field`（通常为 `text`）读取文本列。
+    # 但部分数据集（如 Medical-R1 Distill）并没有 `text` 列，而是 `question`/`response (...)`。
+    # 为了让 TRL_SFT 路径稳定工作，这里在满足条件时改用 Oumi 内置注册数据集
+    # `PromptResponseDataset`，它会把 prompt/response 转成 messages 并直接产出 `input_ids`，
+    # 从而触发 oumi/train.py 中的 “Skipping dataset preparation for TRL_SFT trainer”。
+    data_overrides = task.config_params.get("data", {}) if task.config_params else {}
+    use_prompt_response_dataset = bool(data_overrides.get("use_prompt_response_dataset"))
+    prompt_column_override = data_overrides.get("prompt_column")
+    response_column_override = data_overrides.get("response_column")
+    hf_dataset_path_override = data_overrides.get("hf_dataset_path")
+
+    is_medical_r1_distill = (
+        isinstance(dataset_resource.repo_id, str)
+        and dataset_resource.repo_id.strip() == "FreedomIntelligence/Medical-R1-Distill-Data-Chinese"
+    )
+
+    # 默认数据集条目：直接使用 HuggingFace 数据集名
+    dataset_entry: Dict[str, Any] = {"dataset_name": dataset_resource.repo_id}
+
+    # 仅在 SFT（TRL_SFT）训练时启用该兼容逻辑
+    # - 用户显式要求使用 PromptResponseDataset
+    # - 或显式提供 prompt/response 列名
+    # - 或命中已知的数据集（Medical-R1 Distill）
+    if (
+        training_type not in ["DPO", "PRETRAIN"]
+        and (
+            use_prompt_response_dataset
+            or (prompt_column_override is not None and response_column_override is not None)
+            or is_medical_r1_distill
+        )
+    ):
+        hf_dataset_path = hf_dataset_path_override or dataset_resource.repo_id
+        prompt_column = prompt_column_override or ("question" if is_medical_r1_distill else "instruction")
+        response_column = response_column_override or ("response (content)" if is_medical_r1_distill else "output")
+
+        dataset_entry = {
+            "dataset_name": "PromptResponseDataset",
+            "dataset_kwargs": {
+                "hf_dataset_path": hf_dataset_path,
+                "prompt_column": prompt_column,
+                "response_column": response_column,
+            },
+        }
+
     config["data"] = {
         "train": {
-            "datasets": [
-                {"dataset_name": dataset_resource.repo_id}
-            ],
-            "target_col": "prompt"
+            "datasets": [dataset_entry],
+            "target_col": "prompt",
         }
     }
     
@@ -116,8 +159,10 @@ def generate_training_config(task: TrainingTask) -> str:
         "save_final_model": True,
         "save_steps": 100,
         "max_steps": 10,
-        "per_device_train_batch_size": 4,
-        "gradient_accumulation_steps": 4,
+        # 默认更保守，避免在共享 GPU 或显存碎片时 OOM。
+        # 等效 batch size: 1 * 16 = 16（与原先 4 * 4 相同）
+        "per_device_train_batch_size": 1,
+        "gradient_accumulation_steps": 16,
         "ddp_find_unused_parameters": False,
         "optimizer": "adamw_torch",
         "learning_rate": 2.0e-05,
@@ -454,6 +499,44 @@ async def run_training(task_id: int):
             'NCCL_P2P_DISABLE': '1',
             'NCCL_IB_DISABLE': '1'
         })
+
+        # 尽量避免默认落到 GPU0（共享机器上经常被其他任务占满）导致 OOM。
+        # 规则：
+        # - 若外部已设置 CUDA_VISIBLE_DEVICES，则尊重外部设置
+        # - 若任务配置显式提供 data/training 相关的 cuda_visible_devices，也尊重它
+        # - 否则自动选择当前空闲显存最多的一张卡
+        requested_visible_devices = None
+        if task.config_params:
+            # 允许从 training 或 data 节点传入（为了兼容不同调用方）
+            requested_visible_devices = (
+                task.config_params.get("training", {}).get("cuda_visible_devices")
+                or task.config_params.get("data", {}).get("cuda_visible_devices")
+            )
+
+        if ("CUDA_VISIBLE_DEVICES" not in env or not env.get("CUDA_VISIBLE_DEVICES")) and not requested_visible_devices:
+            try:
+                if torch.cuda.is_available() and torch.cuda.device_count() > 0:
+                    best_idx = 0
+                    best_free = -1
+                    for i in range(torch.cuda.device_count()):
+                        free_bytes, total_bytes = torch.cuda.mem_get_info(i)
+                        if free_bytes > best_free:
+                            best_free = free_bytes
+                            best_idx = i
+                    env["CUDA_VISIBLE_DEVICES"] = str(best_idx)
+                    await broadcast_log(
+                        task_id,
+                        f"自动选择空闲显存最多的GPU: {best_idx} (free={best_free/1024/1024/1024:.2f}GiB) 并设置 CUDA_VISIBLE_DEVICES={best_idx}"
+                    )
+            except Exception as e:
+                await broadcast_log(task_id, f"自动选择GPU失败，将使用默认CUDA设备: {str(e)}", "WARNING")
+        elif requested_visible_devices:
+            env["CUDA_VISIBLE_DEVICES"] = str(requested_visible_devices)
+            await broadcast_log(task_id, f"使用任务配置指定 CUDA_VISIBLE_DEVICES={requested_visible_devices}")
+
+        # 减少显存碎片导致的 OOM 风险
+        env.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
         await broadcast_log(task_id, f"设置环境变量: NCCL_P2P_DISABLE=1, NCCL_IB_DISABLE=1")
         
         # 启动训练进程

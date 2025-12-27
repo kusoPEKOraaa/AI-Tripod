@@ -12,6 +12,7 @@ import logging
 import requests
 import time
 import shutil
+import re
 from typing import Dict, Any, Optional, List, Set, Tuple
 from datetime import datetime
 from pathlib import Path
@@ -29,6 +30,91 @@ LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
 # 存储活跃的推理进程
 active_processes: List[Dict[str, Any]] = []
+
+
+def _strip_think_tags(text: str) -> str:
+    """移除模型输出中的 <think>...</think> 推理片段。
+
+    说明：部分模型/模板会把推理过程以 <think> 块输出到最终文本中；
+    前端不应展示该片段，因此在后端统一清洗。
+    """
+    if not text:
+        return text
+
+    cleaned = re.sub(r"<think\b[^>]*>.*?</think>", "", text, flags=re.IGNORECASE | re.DOTALL)
+    cleaned = re.sub(r"</?think\b[^>]*>", "", cleaned, flags=re.IGNORECASE)
+
+    # 规整多余空行
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.strip()
+
+
+def _pick_best_gpus(num_gpus: int = 1) -> List[Tuple[int, float, float]]:
+    """选择空闲显存最多的 GPU。
+
+    Returns:
+        List[(gpu_id, free_gb, total_gb)]，按 free_gb 降序。
+    """
+    if num_gpus <= 0:
+        return []
+
+    real_gpu_info = get_real_gpu_info()
+    if real_gpu_info.get("available") and real_gpu_info.get("gpus"):
+        gpus: List[Tuple[int, float, float]] = []
+        for g in real_gpu_info["gpus"]:
+            try:
+                gpus.append((int(g["id"]), float(g["memory_free"]), float(g["memory_total"])))
+            except Exception:
+                continue
+        gpus.sort(key=lambda x: x[1], reverse=True)
+        return gpus[:num_gpus]
+
+    # fallback: torch
+    try:
+        if torch.cuda.is_available() and torch.cuda.device_count() > 0:
+            gpus = []
+            for i in range(torch.cuda.device_count()):
+                free_b, total_b = torch.cuda.mem_get_info(i)
+                gpus.append((i, free_b / 1024 / 1024 / 1024, total_b / 1024 / 1024 / 1024))
+            gpus.sort(key=lambda x: x[1], reverse=True)
+            return gpus[:num_gpus]
+    except Exception:
+        pass
+
+    return []
+
+
+def _compute_safe_gpu_memory_utilization(
+    *,
+    free_gb: float,
+    total_gb: float,
+    desired: float = 0.85,
+    reserve_gb: float = 2.0,
+    min_util: float = 0.01,
+) -> float:
+    """根据实际空闲显存，计算一个不会在启动时被 vLLM 拒绝的 utilization。
+
+    vLLM 的报错逻辑大致是：free_memory < utilization * total_memory 就直接 fail。
+    """
+    if total_gb <= 0:
+        return desired
+    safe_free = max(0.0, free_gb - reserve_gb)
+    max_util = safe_free / total_gb
+    util = min(desired, max_util)
+    util = max(min_util, util)
+    # 取 3 位小数，避免命令行太长
+    return float(f"{util:.3f}")
+
+
+def _filter_gpus_by_free_memory(
+    gpus: List[Tuple[int, float, float]],
+    *,
+    min_free_gb: float,
+) -> List[Tuple[int, float, float]]:
+    """按最小空闲显存过滤 GPU 列表。"""
+    if min_free_gb <= 0:
+        return gpus
+    return [g for g in gpus if g[1] >= min_free_gb]
 
 # 查找可用端口
 def find_available_port(start_port: int = 8000, max_attempts: int = 100) -> int:
@@ -434,6 +520,130 @@ async def start_inference_service(task_id: int) -> bool:
     
     # 构建命令
     command, used_port = build_vllm_command(task, model_path)
+
+    # -------- GPU 选择与显存利用率自适应（解决共享机器启动失败） --------
+    env = os.environ.copy()
+    env.setdefault("CUDA_DEVICE_ORDER", "PCI_BUS_ID")
+    env.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
+    selected_gpu_ids: List[int] = []
+
+    # 估算模型所需显存（用于选卡与util下限）
+    estimated_required_gb = estimate_model_memory(
+        task.model_id,
+        tensor_parallel_size=int(task.tensor_parallel_size),
+        max_model_len=int(task.max_model_len),
+        quantization=task.quantization,
+    )
+    # 给 vLLM/驱动预留一点余量，避免边界条件下启动后立刻 OOM
+    selection_safety_gb = 2.0
+    min_free_needed_gb = estimated_required_gb + selection_safety_gb
+
+    # 若用户/外部已指定 CUDA_VISIBLE_DEVICES，则尊重它；否则自动挑选空闲显存最多的 GPU
+    cuda_visible_devices = env.get("CUDA_VISIBLE_DEVICES")
+    if not cuda_visible_devices:
+        tp = max(1, int(task.tensor_parallel_size))
+        candidates = _pick_best_gpus(num_gpus=max(tp, 8))  # 多取一些以便过滤
+        candidates = _filter_gpus_by_free_memory(candidates, min_free_gb=min_free_needed_gb)
+        picks = candidates[:tp]
+        selected_gpu_ids = [p[0] for p in picks]
+        if selected_gpu_ids:
+            env["CUDA_VISIBLE_DEVICES"] = ",".join(str(i) for i in selected_gpu_ids)
+            logger.info(
+                f"为推理任务 {task_id} 自动选择GPU: CUDA_VISIBLE_DEVICES={env['CUDA_VISIBLE_DEVICES']} "
+                f"(min_free_needed≈{min_free_needed_gb:.2f}GiB)"
+            )
+        else:
+            # 没有任何 GPU 满足最小空闲显存要求，直接失败，避免不断 502
+            real_gpu_info = get_real_gpu_info()
+            if real_gpu_info.get("available") and real_gpu_info.get("gpus"):
+                snapshot = ", ".join(
+                    f"gpu{g['id']}:free={g['memory_free']:.2f}GiB/total={g['memory_total']:.2f}GiB"
+                    for g in real_gpu_info["gpus"]
+                )
+            else:
+                snapshot = "无法获取 nvidia-smi GPU 信息"
+            error_msg = (
+                f"当前无可用GPU满足推理启动的最小空闲显存要求："
+                f"需要≈{min_free_needed_gb:.2f}GiB (模型估算≈{estimated_required_gb:.2f}GiB + 余量≈{selection_safety_gb:.2f}GiB)。"
+                f" GPU 状态: {snapshot}"
+            )
+            logger.error(error_msg)
+            update_inference_task(
+                task_id=task_id,
+                status=InferenceStatus.FAILED,
+                error_message=error_msg,
+            )
+            return False
+    else:
+        # 记录一下（用于 process_info 展示）；可能是逗号分隔的列表
+        try:
+            selected_gpu_ids = [int(x) for x in cuda_visible_devices.split(",") if x.strip().isdigit()]
+        except Exception:
+            selected_gpu_ids = []
+
+    # 根据选中 GPU 的空闲显存，动态下调 gpu-memory-utilization，避免 vLLM 启动时直接 ValueError
+    # 对于多卡（TP>1），取最小 free/total 作为约束。
+    desired_util = 0.85
+    min_free_gb = None
+    min_total_gb = None
+    picks_for_util = _pick_best_gpus(num_gpus=max(1, int(task.tensor_parallel_size)))
+    # 如果用户指定了 CUDA_VISIBLE_DEVICES，则尽量按该列表查
+    if selected_gpu_ids:
+        # 用 nvidia-smi 数据尽量准确
+        real_gpu_info = get_real_gpu_info()
+        if real_gpu_info.get("available") and real_gpu_info.get("gpus"):
+            lookup = {int(g["id"]): g for g in real_gpu_info["gpus"]}
+            for gid in selected_gpu_ids[: max(1, int(task.tensor_parallel_size))]:
+                g = lookup.get(gid)
+                if not g:
+                    continue
+                free_gb = float(g["memory_free"])
+                total_gb = float(g["memory_total"])
+                min_free_gb = free_gb if min_free_gb is None else min(min_free_gb, free_gb)
+                min_total_gb = total_gb if min_total_gb is None else min(min_total_gb, total_gb)
+    elif picks_for_util:
+        for gid, free_gb, total_gb in picks_for_util:
+            min_free_gb = free_gb if min_free_gb is None else min(min_free_gb, free_gb)
+            min_total_gb = total_gb if min_total_gb is None else min(min_total_gb, total_gb)
+
+    if min_free_gb is not None and min_total_gb is not None:
+        reserve_gb = 2.0
+        # 上限：按实际 free/total 计算，确保不触发 vLLM 启动时报错
+        safe_util = _compute_safe_gpu_memory_utilization(
+            free_gb=min_free_gb,
+            total_gb=min_total_gb,
+            desired=desired_util,
+            reserve_gb=reserve_gb,
+            min_util=0.01,
+        )
+        # 下限：至少要能容纳模型估算显存（再留一点点余量）
+        min_required_util = (estimated_required_gb + 0.5) / max(1e-6, float(min_total_gb))
+        if min_required_util > safe_util:
+            # 如果下限已经超过“安全上限”，说明选中的 GPU 实际 free 不够跑模型
+            # 这里直接失败，比启动后 OOM/502 更可控。
+            error_msg = (
+                f"推理启动显存不足：选中GPU空闲≈{min_free_gb:.2f}GiB/总≈{min_total_gb:.2f}GiB，"
+                f"模型估算≈{estimated_required_gb:.2f}GiB。请换更空闲的GPU或释放显存。"
+            )
+            logger.error(error_msg)
+            update_inference_task(
+                task_id=task_id,
+                status=InferenceStatus.FAILED,
+                error_message=error_msg,
+            )
+            return False
+        safe_util = max(safe_util, float(f"{min_required_util:.3f}"))
+        # 替换命令行中的 gpu-memory-utilization 参数
+        try:
+            idx = command.index("--gpu-memory-utilization")
+            command[idx + 1] = str(safe_util)
+            logger.info(
+                f"根据实际空闲显存自适应设置 --gpu-memory-utilization={safe_util} (free≈{min_free_gb:.2f}GiB / total≈{min_total_gb:.2f}GiB)"
+            )
+        except Exception:
+            pass
+
     command_str = " ".join(command)
     logger.info(f"启动推理服务: {command_str}")
     
@@ -458,7 +668,8 @@ async def start_inference_service(task_id: int) -> bool:
             process = await asyncio.create_subprocess_exec(
                 *command,
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                stderr=asyncio.subprocess.PIPE,
+                env=env,
             )
             logger.info(f"推理进程启动成功: PID={process.pid}")
             
@@ -528,14 +739,14 @@ async def start_inference_service(task_id: int) -> bool:
                 max_model_len=task.max_model_len,
                 quantization=task.quantization
             ),
-            "gpu_device": 0  # 默认使用第一个GPU
+            "gpu_device": selected_gpu_ids[0] if selected_gpu_ids else 0
         }
         active_processes.append(process_info)
         
-        # 更新任务状态
+        # 更新任务信息（先保持为 CREATING，直到健康检查通过再标记 RUNNING，避免用户过早发起请求拿到 502）
         update_inference_task(
             task_id=task_id,
-            status=InferenceStatus.RUNNING,
+            status=InferenceStatus.CREATING,
             process_id=process.pid,
             started_at=datetime.now(),
             gpu_memory=process_info["gpu_memory"],
@@ -584,6 +795,10 @@ async def start_inference_service(task_id: int) -> bool:
                 response = requests.get(f"http://localhost:{used_port}/v1/models", timeout=10)  # 增加单次请求超时
                 if response.status_code == 200:
                     logger.info(f"推理服务准备就绪: 任务={task_id}, 端口={used_port}, 响应={response.text[:100]}")
+                    update_inference_task(
+                        task_id=task_id,
+                        status=InferenceStatus.RUNNING,
+                    )
                     return True
                 else:
                     logger.warning(f"推理服务健康检查返回非200状态码: {response.status_code}, 响应: {response.text[:100]}")
@@ -767,9 +982,24 @@ async def perform_inference(
         logger.error(f"推理任务不存在: {task_id}")
         return {"error": "推理任务不存在"}
     
+    # 如果服务尚未 ready（仍处于 CREATING），这里等待一小段时间，避免用户刚点聊天就失败
     if task.status != InferenceStatus.RUNNING:
-        logger.error(f"推理任务未运行: {task_id}, 当前状态={task.status}")
-        return {"error": f"推理任务未运行，当前状态: {task.status}"}
+        if task.status == InferenceStatus.CREATING and task.port:
+            wait_seconds = 120
+            deadline = time.time() + wait_seconds
+            while time.time() < deadline:
+                try:
+                    r = requests.get(f"http://localhost:{task.port}/v1/models", timeout=5)
+                    if r.status_code == 200:
+                        update_inference_task(task_id=task_id, status=InferenceStatus.RUNNING)
+                        task = get_inference_task(task_id=task_id)
+                        break
+                except Exception:
+                    pass
+                await asyncio.sleep(2)
+        if task.status != InferenceStatus.RUNNING:
+            logger.error(f"推理任务未运行: {task_id}, 当前状态={task.status}")
+            return {"error": f"推理任务未运行，当前状态: {task.status}"}
     
     if not task.api_base or not task.port:
         logger.error(f"推理任务API基础URL未设置: {task_id}")
@@ -804,19 +1034,41 @@ async def perform_inference(
     
     try:
         start_time = time.time()
-        
-        # 发送请求到vLLM OpenAI兼容API
-        response = requests.post(
-            api_url,
-            json=payload,
-            timeout=60
-        )
+
+        # vLLM 在启动阶段可能对 OpenAI 路由返回 502；这里做一个短暂重试
+        max_attempts = 6
+        last_status = None
+        last_text = ""
+        response = None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                response = requests.post(api_url, json=payload, timeout=60)
+                last_status = response.status_code
+                last_text = response.text or ""
+                if response.status_code == 200:
+                    break
+                # 502/503 多数是引擎尚未 ready，稍等再试
+                if response.status_code in (502, 503):
+                    await asyncio.sleep(min(2 * attempt, 10))
+                    continue
+                # 其他状态码不盲目重试
+                break
+            except requests.exceptions.RequestException as e:
+                last_text = str(e)
+                await asyncio.sleep(min(2 * attempt, 10))
+                continue
         
         request_time = time.time() - start_time
         logger.debug(f"请求处理时间: {request_time:.2f}秒")
-        
+
+        if response is None:
+            logger.error(f"推理请求失败: 未能连接到推理服务, 详情: {last_text[:200]}")
+            return {"error": "推理请求失败: 无法连接到推理服务", "details": last_text}
+
         if response.status_code != 200:
             logger.error(f"推理请求失败: HTTP {response.status_code}, 响应: {response.text[:200]}")
+            if response.status_code in (502, 503):
+                return {"error": "推理服务尚未就绪，请稍后重试", "details": response.text}
             return {"error": f"推理请求失败: HTTP {response.status_code}", "details": response.text}
         
         # 解析响应
@@ -825,7 +1077,7 @@ async def perform_inference(
         # 提取生成的文本
         message = {
             "role": "assistant",
-            "content": result["choices"][0]["message"]["content"]
+            "content": _strip_think_tags(result["choices"][0]["message"]["content"])
         }
         
         # 记录推理结果

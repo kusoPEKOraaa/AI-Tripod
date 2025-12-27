@@ -277,7 +277,8 @@ class Message(BaseModel):
 class ChatRequest(BaseModel):
     """聊天请求"""
     messages: List[Message]
-    task_id: int
+    # 路由路径里已经包含 task_id；这里保留为可选以兼容不同客户端
+    task_id: Optional[int] = None
     temperature: Optional[float] = None
     top_p: Optional[float] = None
     max_tokens: Optional[int] = None
