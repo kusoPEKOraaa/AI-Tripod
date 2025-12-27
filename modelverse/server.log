@@ -1,0 +1,115 @@
+nohup: ignoring input
+INFO:huggingface_utils:当前使用的HuggingFace端点: https://hf-mirror.com
+INFO:huggingface_utils:使用环境变量配置端点: https://hf-mirror.com
+INFO:huggingface_utils:已修改huggingface_hub.constants.ENDPOINT: https://hf-mirror.com -> https://hf-mirror.com
+INFO:huggingface_utils:已修改huggingface_hub常量 INFERENCE_CATALOG_ENDPOINT: https://endpoints.huggingface.co/api/catalog -> https://endpoints.hf-mirror.com/api/catalog
+INFO:huggingface_utils:已修改huggingface_hub常量 INFERENCE_ENDPOINT: https://api-inference.huggingface.co -> https://api-inference.hf-mirror.com
+INFO:huggingface_utils:已修改huggingface_hub常量 _HF_DEFAULT_ENDPOINT: https://huggingface.co -> https://hf-mirror.com
+INFO:huggingface_utils:已修改huggingface_hub常量 _HF_DEFAULT_STAGING_ENDPOINT: https://hub-ci.huggingface.co -> https://hub-ci.hf-mirror.com
+INFO:huggingface_utils:============= 网络连接测试 =============
+INFO:huggingface_utils:✓ 可以连接到 OFFICIAL: https://huggingface.co
+INFO:huggingface_utils:✓ 可以连接到 MODELSCOPE: https://modelscope.cn/huggingface
+INFO:huggingface_utils:✓ 可以连接到 MIRROR_CN: https://hf-mirror.com
+INFO:huggingface_utils:✓ DNS解析 hf-mirror.com -> 160.16.86.14
+INFO:huggingface_utils:========================================
+INFO:huggingface_utils:============ HuggingFace配置信息 ============
+INFO:huggingface_utils:huggingface_hub版本: 0.36.0
+INFO:huggingface_utils:环境变量HF_ENDPOINT: https://hf-mirror.com
+INFO:huggingface_utils:环境变量HF_HUB_ENABLE_HF_TRANSFER: 0
+INFO:huggingface_utils:huggingface_hub.constants.ENDPOINT = https://hf-mirror.com
+INFO:huggingface_utils:huggingface_hub.constants.ENDPOINT = https://hf-mirror.com
+INFO:huggingface_utils:huggingface_hub.constants.HUGGINGFACE_HEADER_X_XET_ENDPOINT = X-Xet-Cas-Url
+INFO:huggingface_utils:huggingface_hub.constants.INFERENCE_CATALOG_ENDPOINT = https://endpoints.hf-mirror.com/api/catalog
+INFO:huggingface_utils:huggingface_hub.constants.INFERENCE_ENDPOINT = https://api-inference.hf-mirror.com
+INFO:huggingface_utils:huggingface_hub.constants.INFERENCE_ENDPOINTS_ENDPOINT = https://api.endpoints.huggingface.cloud/v2
+INFO:huggingface_utils:huggingface_hub.constants._HF_DEFAULT_ENDPOINT = https://hf-mirror.com
+INFO:huggingface_utils:huggingface_hub.constants._HF_DEFAULT_STAGING_ENDPOINT = https://hub-ci.hf-mirror.com
+INFO:huggingface_utils:hf_transfer已安装，版本: 0.1.9
+INFO:huggingface_utils:测试镜像站连接...
+INFO:huggingface_utils:连接到 https://hf-mirror.com 成功，状态码: 200
+INFO:huggingface_utils:=========================================
+INFO:root:操作系统: Linux 6.6.87.2-microsoft-standard-WSL2
+INFO:root:Python版本: 3.10.12
+INFO:root:huggingface_hub版本: 0.36.0
+WARNING:root:当前huggingface_hub版本 0.36.0 可能不支持某些功能。建议升级到0.17.0以上版本：pip install --upgrade huggingface_hub>=0.17.0
+INFO:     Started server process [11886]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8888 (Press CTRL+C to quit)
+✅ NumExpr已优化: 使用 16 个线程
+正在测试网络连通性...
+镜像站连通性测试成功: https://hf-mirror.com
+选择的端点: https://hf-mirror.com (镜像站)
+当前huggingface_hub版本: 0.36.0
+INFO:     127.0.0.1:44832 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44840 - "GET /static/css/style.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48180 - "GET /static/js/api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63710 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63710 - "GET /static/css/style.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50618 - "GET /static/js/api.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50618 - "GET /static/js/utils.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63710 - "GET /static/js/router.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63710 - "GET /static/js/components.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50618 - "GET /static/js/pages.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63710 - "GET /static/js/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63710 - "GET /api/captcha?captcha_id=captcha_1766655440181_msg4xro7h&t=1766655440181 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58187 - "GET /api/captcha?captcha_id=captcha_1766655446888_fw7s3gosg&t=1766655446888 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58187 - "GET /api/captcha?captcha_id=captcha_1766655447830_p3ap1uc37&t=1766655447830 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58187 - "POST /token HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58187 - "GET /api/resources HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65488 - "GET /api/training/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64130 - "GET /api/inference/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51338 - "GET /api/evaluation/tasks HTTP/1.1" 200 OK
+ERROR:inference_utils:nvidia-smi执行失败: 
+INFO:     127.0.0.1:64130 - "GET /api/inference/gpu HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64130 - "GET /api/resources HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64130 - "GET /api/training/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64130 - "GET /api/resources HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58607 - "GET /api/training/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64130 - "GET /api/evaluation/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58607 - "GET /api/inference/tasks HTTP/1.1" 200 OK
+ERROR:inference_utils:nvidia-smi执行失败: 
+INFO:     127.0.0.1:58607 - "GET /api/inference/gpu HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58607 - "GET /api/resources HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58607 - "GET /api/resources/5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51926 - "POST /api/resources HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:51926 - "POST /api/resources HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:59113 - "GET /api/training/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59113 - "GET /api/resources HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59113 - "GET /api/resources HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59113 - "GET /api/resources?type=MODEL HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59113 - "GET /api/resources HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60452 - "GET /api/training/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60452 - "GET /api/evaluation/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59113 - "GET /api/inference/tasks HTTP/1.1" 200 OK
+ERROR:inference_utils:nvidia-smi执行失败: 
+INFO:     127.0.0.1:60452 - "GET /api/inference/gpu HTTP/1.1" 200 OK
+ERROR:inference_utils:nvidia-smi执行失败: 
+INFO:     127.0.0.1:60452 - "GET /api/inference/gpu HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60452 - "GET /api/inference/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60452 - "GET /api/resources HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60452 - "GET /api/evaluation/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62739 - "GET /api/training/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60452 - "GET /api/resources HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54963 - "GET /api/inference/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54686 - "GET /api/evaluation/tasks HTTP/1.1" 200 OK
+ERROR:inference_utils:nvidia-smi执行失败: 
+INFO:     127.0.0.1:54963 - "GET /api/inference/gpu HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54963 - "GET /api/resources?type=MODEL HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54963 - "GET /api/resources HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60452 - "GET /api/inference/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62739 - "GET /api/evaluation/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54686 - "GET /api/training/tasks HTTP/1.1" 200 OK
+ERROR:inference_utils:nvidia-smi执行失败: 
+INFO:     127.0.0.1:59021 - "GET /api/inference/gpu HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59021 - "GET /api/training/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59021 - "GET /api/resources HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54686 - "GET /api/training/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54963 - "GET /api/inference/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60452 - "GET /api/evaluation/tasks HTTP/1.1" 200 OK
+ERROR:inference_utils:nvidia-smi执行失败: 
+INFO:     127.0.0.1:62739 - "GET /api/inference/gpu HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [11886]

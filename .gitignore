@@ -1,1 +1,39 @@
-LLaMA-Factory/
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual env
+.venv/
+venv/
+ENV/
+
+# OS / editor
+.DS_Store
+*.swp
+*.swo
+.vscode/
+
+# App runtime artifacts / data
+modelverse/modelverse.db
+modelverse/logs/
+modelverse/uploads/
+modelverse/models/
+modelverse/datasets/
+modelverse/trainedmodels/
+modelverse/training_configs/
+modelverse/evaluation_configs/
+modelverse/evaluation_results/
+
+# HuggingFace / datasets caches
+modelverse/hf_cache/
+modelverse/datasets_cache/
+
+# Accidental artifacts
+modelverse/=*
