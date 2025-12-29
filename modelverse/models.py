@@ -152,6 +152,7 @@ class TrainingTaskCreate(BaseModel):
     name: str
     base_model_id: int
     dataset_id: Optional[int] = None
+    gpu_ids: Optional[List[int]] = None
     # 前端可能传入字符串形式的JSON，这里允许str并在后端转换
     config_params: Union[Dict[str, Any], str] = Field(default_factory=dict)
 

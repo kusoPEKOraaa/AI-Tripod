@@ -558,6 +558,10 @@ def _download_worker(resource_id: int, resource: Resource, source: MirrorSource,
             
             while not stop_event.is_set() and not download_completed.is_set():
                 time.sleep(3)  # 每3秒检查一次，提高响应性
+
+                # 避免在下载完成/停止后仍进行一次循环更新（会导致进度被二次放大到10000%）
+                if stop_event.is_set() or download_completed.is_set():
+                    break
                 
                 # 检查目录是否存在及其内容
                 try:
@@ -648,15 +652,21 @@ def _download_worker(resource_id: int, resource: Resource, source: MirrorSource,
                                 count_progress = min(0.95, 0.3 + (file_count / 25) * 0.65)  # 基于数量（假设25个文件）
                                 estimated_progress = min(0.98, max(0.3, size_progress * 0.7 + count_progress * 0.3))
 
+                                # 统一资源下载进度尺度为 0-100（前端按百分比展示）
+                                estimated_progress_percent = max(0.0, min(98.0, estimated_progress * 100.0))
+
                                 # 确保进度不会减少
                                 current_progress = _active_downloads[resource_id].get("progress", 0)
-                                estimated_progress = max(current_progress, estimated_progress)
+                                estimated_progress_percent = max(current_progress, estimated_progress_percent)
 
-                                _active_downloads[resource_id]["progress"] = estimated_progress
+                                # 安全夹紧到 0-100
+                                estimated_progress_percent = max(0.0, min(100.0, float(estimated_progress_percent)))
+
+                                _active_downloads[resource_id]["progress"] = estimated_progress_percent
                                 update_resource_status(
                                     resource_id=resource_id,
                                     status=DownloadStatus.DOWNLOADING,
-                                    progress=estimated_progress * 100
+                                    progress=estimated_progress_percent
                                 )
                 except Exception as e:
                     logger.warning(f"检查下载进度时出错: {str(e)}")
@@ -806,8 +816,8 @@ def _download_worker(resource_id: int, resource: Resource, source: MirrorSource,
                                         asyncio.run(broadcast_resource_update(progress_data))
                                         logger.info(f"文件下载完成，已发送进度更新: {idx+1}/{len(repo_info.siblings)} ({progress_percent:.1f}%), 文件: {file_info.rfilename}")
                                         
-                                        # 同时更新数据库中的进度（保持百分比格式）
-                                        _active_downloads[resource_id]["progress"] = progress_percent / 100.0
+                                        # 同时更新数据库中的进度（保持百分比格式，0-100）
+                                        _active_downloads[resource_id]["progress"] = progress_percent
                                         update_resource_status(
                                             resource_id=resource_id,
                                             status=DownloadStatus.DOWNLOADING,
@@ -938,8 +948,8 @@ def _download_worker(resource_id: int, resource: Resource, source: MirrorSource,
                                         asyncio.run(broadcast_resource_update(progress_data))
                                         logger.info(f"文件下载完成，已发送进度更新: {idx+1}/{len(repo_info.siblings)} ({progress_percent:.1f}%), 文件: {file_info.rfilename}")
                                         
-                                        # 同时更新数据库中的进度（保持百分比格式）
-                                        _active_downloads[resource_id]["progress"] = progress_percent / 100.0
+                                        # 同时更新数据库中的进度（保持百分比格式，0-100）
+                                        _active_downloads[resource_id]["progress"] = progress_percent
                                         update_resource_status(
                                             resource_id=resource_id,
                                             status=DownloadStatus.DOWNLOADING,

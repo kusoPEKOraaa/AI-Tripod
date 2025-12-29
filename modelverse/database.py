@@ -20,7 +20,10 @@ from models import (
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # 数据库文件名
-DB_NAME = "modelverse.db"
+DB_NAME = os.path.join(os.path.dirname(os.path.abspath(__file__)), "modelverse.db")
+
+# 验证码有效期（秒）
+CAPTCHA_TTL_SECONDS = int(os.getenv("CAPTCHA_TTL_SECONDS", "600"))
 
 def get_db_connection():
     """获取数据库连接"""
@@ -47,6 +50,20 @@ def init_db():
     )
     ''')
     
+    # 用户表新增列
+    for col_def in [
+        ("allowed_gpu_ids", "TEXT"),
+        ("allowed_task_types", "TEXT")
+    ]:
+        col_name, col_type = col_def
+        try:
+            cursor.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}")
+        except sqlite3.OperationalError as e:
+            # 如果错误不是关于列已存在，则打印错误
+            if "duplicate column name" not in str(e):
+                print(f"Error adding column {col_name}: {e}")
+            pass
+
     # 创建资源表
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS resources (
@@ -194,6 +211,15 @@ def init_db():
         FOREIGN KEY (resource_id) REFERENCES resources (id)
     )
     ''')
+
+    # 创建验证码表（用于注册等流程；避免多进程/重载导致内存不共享）
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS captchas (
+        id TEXT PRIMARY KEY,
+        code TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    ''')
     
     conn.commit()
     
@@ -209,6 +235,73 @@ def init_db():
     
     conn.close()
 
+
+def upsert_captcha(captcha_id: str, code: str) -> None:
+    """写入/更新验证码。"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            INSERT INTO captchas (id, code, created_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(id) DO UPDATE SET
+                code = excluded.code,
+                created_at = CURRENT_TIMESTAMP
+            """,
+            (captcha_id, code),
+        )
+    except sqlite3.OperationalError:
+        # 兼容旧SQLite：退化为先更新再插入
+        cursor.execute(
+            "UPDATE captchas SET code = ?, created_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (code, captcha_id),
+        )
+        if cursor.rowcount == 0:
+            cursor.execute(
+                "INSERT INTO captchas (id, code, created_at) VALUES (?, ?, CURRENT_TIMESTAMP)",
+                (captcha_id, code),
+            )
+    conn.commit()
+    conn.close()
+
+
+def get_captcha_code(captcha_id: str) -> Optional[str]:
+    """读取未过期验证码；过期则返回None。"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    delta = f"-{CAPTCHA_TTL_SECONDS} seconds"
+    cursor.execute(
+        "SELECT code FROM captchas WHERE id = ? AND created_at >= datetime('now', ?)",
+        (captcha_id, delta),
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else None
+
+
+def delete_captcha(captcha_id: str) -> None:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM captchas WHERE id = ?", (captcha_id,))
+    conn.commit()
+    conn.close()
+
+
+def cleanup_expired_captchas() -> int:
+    """清理过期验证码，返回删除数量。"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    delta = f"-{CAPTCHA_TTL_SECONDS} seconds"
+    cursor.execute(
+        "DELETE FROM captchas WHERE created_at < datetime('now', ?)",
+        (delta,),
+    )
+    deleted = cursor.rowcount if cursor.rowcount is not None else 0
+    conn.commit()
+    conn.close()
+    return deleted
+
 # 密码相关函数
 def verify_password(plain_password, hashed_password):
     """验证密码"""
@@ -219,6 +312,23 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 # 用户管理函数
+
+def process_user_row(row: Any) -> Dict[str, Any]:
+    """处理用户数据行，解析JSON字段"""
+    user_dict = dict(row)
+    if user_dict.get('allowed_gpu_ids'):
+        try:
+            user_dict['allowed_gpu_ids'] = json.loads(user_dict['allowed_gpu_ids'])
+        except:
+            user_dict['allowed_gpu_ids'] = None
+    
+    if user_dict.get('allowed_task_types'):
+        try:
+            user_dict['allowed_task_types'] = json.loads(user_dict['allowed_task_types'])
+        except:
+            user_dict['allowed_task_types'] = None
+    return user_dict
+
 def create_user(user: UserCreate) -> User:
     """创建用户"""
     if check_username_exists(user.username):
@@ -229,16 +339,21 @@ def create_user(user: UserCreate) -> User:
     
     hashed_password = get_password_hash(user.password)
     
+    allowed_gpu_ids_json = json.dumps(user.allowed_gpu_ids) if user.allowed_gpu_ids is not None else None
+    allowed_task_types_json = json.dumps(user.allowed_task_types) if user.allowed_task_types is not None else None
+
     cursor.execute('''
-    INSERT INTO users (username, email, hashed_password, display_name, phone, is_admin)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO users (username, email, hashed_password, display_name, phone, is_admin, allowed_gpu_ids, allowed_task_types)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         user.username,
         user.email,
         hashed_password,
         "",  # display_name
         "",  # phone
-        user.is_admin
+        user.is_admin,
+        allowed_gpu_ids_json,
+        allowed_task_types_json
     ))
     
     user_id = cursor.lastrowid
@@ -249,7 +364,7 @@ def create_user(user: UserCreate) -> User:
     user_data = cursor.fetchone()
     conn.close()
     
-    return User(**dict(user_data))
+    return User(**process_user_row(user_data))
 
 def get_user_by_username(username: str) -> Optional[UserInDB]:
     """通过用户名获取用户"""
@@ -261,7 +376,7 @@ def get_user_by_username(username: str) -> Optional[UserInDB]:
     conn.close()
     
     if user_data:
-        return UserInDB(**dict(user_data))
+        return UserInDB(**process_user_row(user_data))
     return None
 
 def get_user_by_id(user_id: int) -> Optional[UserInDB]:
@@ -274,7 +389,7 @@ def get_user_by_id(user_id: int) -> Optional[UserInDB]:
     conn.close()
     
     if user_data:
-        return UserInDB(**dict(user_data))
+        return UserInDB(**process_user_row(user_data))
     return None
 
 def check_username_exists(username: str) -> bool:
@@ -297,7 +412,36 @@ def get_users() -> List[User]:
     users_data = cursor.fetchall()
     conn.close()
     
-    return [User(**dict(user)) for user in users_data]
+    return [User(**process_user_row(user)) for user in users_data]
+
+def update_user_permissions(user_id: int, permissions: Any) -> Optional[User]:
+    """更新用户权限配置"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 检查用户是否存在
+    cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+    if not cursor.fetchone():
+        conn.close()
+        return None
+    
+    allowed_gpu_ids_json = json.dumps(permissions.allowed_gpu_ids) if permissions.allowed_gpu_ids is not None else None
+    allowed_task_types_json = json.dumps(permissions.allowed_task_types) if permissions.allowed_task_types is not None else None
+    
+    cursor.execute('''
+    UPDATE users 
+    SET allowed_gpu_ids = ?, allowed_task_types = ?
+    WHERE id = ?
+    ''', (allowed_gpu_ids_json, allowed_task_types_json, user_id))
+    
+    conn.commit()
+    
+    # 获取更新后的用户
+    cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+    user_data = cursor.fetchone()
+    conn.close()
+    
+    return User(**process_user_row(user_data))
 
 def update_user_profile(user_id: int, profile_data: ProfileUpdate) -> User:
     """更新用户资料"""
@@ -407,7 +551,14 @@ def get_resource(resource_id: int) -> Optional[Resource]:
     conn.close()
     
     if resource_data:
-        return Resource(**dict(resource_data))
+        data = dict(resource_data)
+        if data.get("progress") is not None:
+            try:
+                data["progress"] = max(0.0, min(100.0, float(data["progress"])))
+            except Exception:
+                # 如果progress异常，回退为0，避免前端显示异常值
+                data["progress"] = 0.0
+        return Resource(**data)
     return None
 
 def get_all_resources() -> List[Resource]:
@@ -419,7 +570,16 @@ def get_all_resources() -> List[Resource]:
     resources_data = cursor.fetchall()
     conn.close()
     
-    return [Resource(**dict(resource)) for resource in resources_data]
+    resources: List[Resource] = []
+    for resource in resources_data:
+        data = dict(resource)
+        if data.get("progress") is not None:
+            try:
+                data["progress"] = max(0.0, min(100.0, float(data["progress"])))
+            except Exception:
+                data["progress"] = 0.0
+        resources.append(Resource(**data))
+    return resources
 
 def get_user_resources(user_id: int) -> List[Resource]:
     """获取用户资源"""
@@ -430,7 +590,16 @@ def get_user_resources(user_id: int) -> List[Resource]:
     resources_data = cursor.fetchall()
     conn.close()
     
-    return [Resource(**dict(resource)) for resource in resources_data]
+    resources: List[Resource] = []
+    for resource in resources_data:
+        data = dict(resource)
+        if data.get("progress") is not None:
+            try:
+                data["progress"] = max(0.0, min(100.0, float(data["progress"])))
+            except Exception:
+                data["progress"] = 0.0
+        resources.append(Resource(**data))
+    return resources
 
 def update_resource_status(resource_id: int, status: DownloadStatus, progress: float = None, 
                           error_message: str = None, local_path: str = None, size_mb: float = None) -> Optional[Resource]:
@@ -443,6 +612,10 @@ def update_resource_status(resource_id: int, status: DownloadStatus, progress: f
     params = [status]
     
     if progress is not None:
+        try:
+            progress = max(0.0, min(100.0, float(progress)))
+        except Exception:
+            progress = 0.0
         update_fields.append("progress = ?")
         params.append(progress)
     
@@ -548,6 +721,14 @@ def create_training_task(task_data: TrainingTaskCreate, user_id: int) -> Trainin
             config_params = json.loads(config_params)
         except Exception:
             config_params = {}
+    
+    # 如果指定了GPU ID，将其注入到配置参数中（兼容旧请求/旧模型）
+    gpu_ids = getattr(task_data, "gpu_ids", None)
+    if gpu_ids:
+        if "training" not in config_params:
+            config_params["training"] = {}
+        config_params["training"]["cuda_visible_devices"] = ",".join(map(str, gpu_ids))
+
     config_params_json = json.dumps(config_params) if config_params else None
 
     cursor.execute('''
