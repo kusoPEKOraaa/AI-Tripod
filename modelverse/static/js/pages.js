@@ -4,7 +4,180 @@
  */
 
 const Pages = {
-    // =========== 认证页面 ===========
+    // =========== 首页 ===========
+    home: {
+        async render() {
+            document.body.classList.remove('hide-header');
+
+            const content = `
+                <div class="home-page">
+                    <!-- 英雄区域 -->
+                    <div class="home-hero">
+                        <h1 class="home-hero-title">欢迎使用 AI-Tripod</h1>
+                        <p class="home-hero-subtitle">
+                            大模型集成训练平台，支持模型训练、推理、评估与导出的一体化工作流
+                        </p>
+                        <div class="home-hero-actions">
+                            <a href="#/resources" class="btn btn-primary btn-lg">
+                                <span class="material-icons">rocket_launch</span>
+                                开始使用
+                            </a>
+                            <a href="#/dashboard" class="btn btn-outline btn-lg">
+                                <span class="material-icons">dashboard</span>
+                                查看仪表盘
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- 统计数据 -->
+                    <div class="home-stats" id="home-stats">
+                        ${Components.loading('加载统计数据...')}
+                    </div>
+
+                    <!-- 快捷操作 -->
+                    <div class="home-section">
+                        <h2 class="home-section-title">
+                            <span class="material-icons">flash_on</span>
+                            快捷操作
+                        </h2>
+                        <div class="home-quick-actions">
+                            <a href="#/resources" class="home-quick-action">
+                                <span class="material-icons">cloud_download</span>
+                                <span class="home-quick-action-title">下载资源</span>
+                            </a>
+                            <a href="#/training" class="home-quick-action">
+                                <span class="material-icons">model_training</span>
+                                <span class="home-quick-action-title">创建训练</span>
+                            </a>
+                            <a href="#/inference" class="home-quick-action">
+                                <span class="material-icons">psychology</span>
+                                <span class="home-quick-action-title">启动推理</span>
+                            </a>
+                            <a href="#/evaluation" class="home-quick-action">
+                                <span class="material-icons">analytics</span>
+                                <span class="home-quick-action-title">模型评估</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- 功能特性 -->
+                    <div class="home-section">
+                        <h2 class="home-section-title">
+                            <span class="material-icons">stars</span>
+                            核心功能
+                        </h2>
+                        <div class="home-features">
+                            <div class="home-feature-card">
+                                <div class="home-feature-icon">
+                                    <span class="material-icons">model_training</span>
+                                </div>
+                                <h3 class="home-feature-title">模型训练</h3>
+                                <p class="home-feature-description">
+                                    支持多种基座模型，灵活配置训练参数，实时监控训练进度与日志
+                                </p>
+                            </div>
+                            <div class="home-feature-card">
+                                <div class="home-feature-icon">
+                                    <span class="material-icons">psychology</span>
+                                </div>
+                                <h3 class="home-feature-title">智能推理</h3>
+                                <p class="home-feature-description">
+                                    一键启动推理服务，支持多模态对话，实时响应用户请求
+                                </p>
+                            </div>
+                            <div class="home-feature-card">
+                                <div class="home-feature-icon">
+                                    <span class="material-icons">analytics</span>
+                                </div>
+                                <h3 class="home-feature-title">模型评估</h3>
+                                <p class="home-feature-description">
+                                    集成多种评估基准，自动生成评估报告，直观展示模型性能
+                                </p>
+                            </div>
+                            <div class="home-feature-card">
+                                <div class="home-feature-icon">
+                                    <span class="material-icons">folder</span>
+                                </div>
+                                <h3 class="home-feature-title">资源管理</h3>
+                                <p class="home-feature-description">
+                                    统一管理模型与数据集，支持从 HuggingFace 一键下载资源
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 支持的模型 -->
+                    <div class="home-section">
+                        <h2 class="home-section-title">
+                            <span class="material-icons">verified</span>
+                            支持的基础模型
+                        </h2>
+                        <div class="home-models">
+                            <span class="home-model-tag">Qwen2.5</span>
+                            <span class="home-model-tag">Llama 3.1</span>
+                            <span class="home-model-tag">DeepSeek</span>
+                            <span class="home-model-tag">InternLM</span>
+                            <span class="home-model-tag">Yi</span>
+                            <span class="home-model-tag">Gemma</span>
+                            <span class="home-model-tag">Mistral</span>
+                            <span class="home-model-tag">Phi-3</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('main-content').innerHTML = content;
+            this.loadStats();
+        },
+
+        async loadStats() {
+            try {
+                const [resources, training, inference, evaluation] = await Promise.all([
+                    API.resources.list(),
+                    API.training.list(),
+                    API.inference.list(),
+                    API.evaluation.list()
+                ]);
+
+                const statsHtml = `
+                    <div class="home-stat-card">
+                        <div class="home-stat-icon">
+                            <span class="material-icons">folder</span>
+                        </div>
+                        <div class="home-stat-value">${resources.length}</div>
+                        <div class="home-stat-label">资源总数</div>
+                    </div>
+                    <div class="home-stat-card">
+                        <div class="home-stat-icon">
+                            <span class="material-icons">model_training</span>
+                        </div>
+                        <div class="home-stat-value">${training.length}</div>
+                        <div class="home-stat-label">训练任务</div>
+                    </div>
+                    <div class="home-stat-card">
+                        <div class="home-stat-icon">
+                            <span class="material-icons">psychology</span>
+                        </div>
+                        <div class="home-stat-value">${inference.filter(t => t.status === 'RUNNING').length}</div>
+                        <div class="home-stat-label">运行中服务</div>
+                    </div>
+                    <div class="home-stat-card">
+                        <div class="home-stat-icon">
+                            <span class="material-icons">analytics</span>
+                        </div>
+                        <div class="home-stat-value">${evaluation.length}</div>
+                        <div class="home-stat-label">评估任务</div>
+                    </div>
+                `;
+
+                document.getElementById('home-stats').innerHTML = statsHtml;
+            } catch (error) {
+                document.getElementById('home-stats').innerHTML = Components.emptyState('error', '加载统计数据失败');
+            }
+        }
+    },
+
+    // =========== 认证页面 ==========
     auth: {
         captchaId: null,
         
@@ -114,9 +287,25 @@ const Pages = {
         async refreshCaptcha() {
             const img = document.getElementById('captcha-img');
             if (img) {
-                // 生成新的 captcha_id
-                this.captchaId = 'captcha_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                img.src = `/api/captcha?captcha_id=${this.captchaId}&t=${Date.now()}`;
+                try {
+                    // 从后端获取验证码并提取 captcha-id 响应头
+                    const response = await fetch(`/api/captcha?t=${Date.now()}`);
+                    const captchaId = response.headers.get('captcha-id');
+
+                    if (captchaId) {
+                        this.captchaId = captchaId;
+                        // 使用获取到的图片 URL
+                        const blob = await response.blob();
+                        const imageUrl = URL.createObjectURL(blob);
+                        img.src = imageUrl;
+                    } else {
+                        console.error('未能从响应头获取 captcha-id');
+                        Utils.toast.error('获取验证码失败');
+                    }
+                } catch (error) {
+                    console.error('刷新验证码失败:', error);
+                    Utils.toast.error('刷新验证码失败');
+                }
             }
         },
         
@@ -135,9 +324,9 @@ const Pages = {
                     formData.get('captcha'),
                     this.captchaId
                 );
-                
+
                 Utils.toast.success('登录成功');
-                window.location.hash = '#/dashboard';
+                window.location.hash = '#/home';
             } catch (error) {
                 Utils.toast.error(error.message);
                 this.refreshCaptcha();
@@ -397,31 +586,94 @@ const Pages = {
         
         async startDownload(id) {
             try {
+                // 立即更新UI - 显示正在启动状态
+                const card = document.querySelector(`.resource-card[data-id="${id}"]`);
+                if (card) {
+                    const actionsDiv = card.querySelector('.resource-actions');
+                    if (actionsDiv) {
+                        actionsDiv.innerHTML = `
+                            <button class="btn btn-sm btn-outline" disabled>
+                                <span class="material-icons">hourglass_empty</span> 启动中...
+                            </button>
+                            <button class="btn btn-sm btn-outline" disabled>
+                                <span class="material-icons">info</span>
+                            </button>
+                            <button class="btn btn-sm btn-danger" disabled>
+                                <span class="material-icons">delete</span>
+                            </button>
+                        `;
+                    }
+                }
+
                 await API.resources.startDownload(id);
                 Utils.toast.success('开始下载');
                 this.loadResources();
             } catch (error) {
                 Utils.toast.error(error.message);
+                this.loadResources();
             }
         },
-        
+
         async stopDownload(id) {
             try {
+                // 立即更新UI - 显示正在停止状态
+                const card = document.querySelector(`.resource-card[data-id="${id}"]`);
+                if (card) {
+                    const actionsDiv = card.querySelector('.resource-actions');
+                    if (actionsDiv) {
+                        actionsDiv.innerHTML = `
+                            <button class="btn btn-sm btn-outline" disabled>
+                                <span class="material-icons">hourglass_empty</span> 停止中...
+                            </button>
+                            <button class="btn btn-sm btn-outline" disabled>
+                                <span class="material-icons">info</span>
+                            </button>
+                            <button class="btn btn-sm btn-danger" disabled>
+                                <span class="material-icons">delete</span>
+                            </button>
+                        `;
+                    }
+                }
+
                 await API.resources.stopDownload(id);
                 Utils.toast.success('已停止下载');
+
+                // 立即刷新列表
                 this.loadResources();
             } catch (error) {
                 Utils.toast.error(error.message);
+                // 出错时也要刷新列表以恢复状态
+                this.loadResources();
             }
         },
-        
+
         async retryDownload(id) {
             try {
+                // 立即更新UI - 显示正在重试状态
+                const card = document.querySelector(`.resource-card[data-id="${id}"]`);
+                if (card) {
+                    const actionsDiv = card.querySelector('.resource-actions');
+                    if (actionsDiv) {
+                        actionsDiv.innerHTML = `
+                            <button class="btn btn-sm btn-outline" disabled>
+                                <span class="material-icons">hourglass_empty</span> 重试中...
+                            </button>
+                            <button class="btn btn-sm btn-outline" disabled>
+                                <span class="material-icons">info</span>
+                            </button>
+                            <button class="btn btn-sm btn-danger" disabled>
+                                <span class="material-icons">delete</span>
+                            </button>
+                        `;
+                    }
+                }
+
                 await API.resources.retryDownload(id);
                 Utils.toast.success('重新开始下载');
                 this.loadResources();
             } catch (error) {
                 Utils.toast.error(error.message);
+                this.loadResources();
             }
         },
         
@@ -468,16 +720,18 @@ const Pages = {
     
     // =========== 训练任务页面 ===========
     training: {
+        pollingTimer: null,
+
         async render() {
             document.body.classList.remove('hide-header');
-            
+
             const toolbar = Components.toolbar(
                 '',
                 `<button class="btn btn-primary" onclick="Pages.training.showCreateModal()">
                     <span class="material-icons">add</span> 创建训练任务
                 </button>`
             );
-            
+
             const content = `
                 ${Components.pageHeader('训练任务', '管理模型训练任务')}
                 ${toolbar}
@@ -485,15 +739,31 @@ const Pages = {
                     ${Components.loading('加载训练任务...')}
                 </div>
             `;
-            
+
             document.getElementById('main-content').innerHTML = content;
             this.loadTasks();
+            this.startPolling();
+        },
+
+        stopPolling() {
+            if (this.pollingTimer) {
+                clearInterval(this.pollingTimer);
+                this.pollingTimer = null;
+            }
+        },
+
+        startPolling() {
+            this.stopPolling();
+            // 每5秒刷新一次
+            this.pollingTimer = setInterval(() => {
+                this.loadTasks(true);
+            }, 5000);
         },
         
-        async loadTasks() {
+        async loadTasks(silent = false) {
             try {
                 const tasks = await API.training.list();
-                
+
                 if (tasks.length === 0) {
                     document.getElementById('training-container').innerHTML = Components.emptyState(
                         'model_training',
@@ -504,7 +774,9 @@ const Pages = {
                     document.getElementById('training-container').innerHTML = tasks.map(t => Components.trainingCard(t)).join('');
                 }
             } catch (error) {
-                Utils.toast.error('加载任务失败: ' + error.message);
+                if (!silent) {
+                    Utils.toast.error('加载任务失败: ' + error.message);
+                }
             }
         },
         
@@ -693,16 +965,18 @@ const Pages = {
     
     // =========== 推理服务页面 ===========
     inference: {
+        pollingTimer: null,
+
         async render() {
             document.body.classList.remove('hide-header');
-            
+
             const toolbar = Components.toolbar(
                 '',
                 `<button class="btn btn-primary" onclick="Pages.inference.showCreateModal()">
                     <span class="material-icons">add</span> 创建推理服务
                 </button>`
             );
-            
+
             const content = `
                 ${Components.pageHeader('推理服务', '管理模型推理服务')}
                 ${toolbar}
@@ -710,15 +984,31 @@ const Pages = {
                     ${Components.loading('加载推理服务...')}
                 </div>
             `;
-            
+
             document.getElementById('main-content').innerHTML = content;
             this.loadTasks();
+            this.startPolling();
         },
-        
-        async loadTasks() {
+
+        stopPolling() {
+            if (this.pollingTimer) {
+                clearInterval(this.pollingTimer);
+                this.pollingTimer = null;
+            }
+        },
+
+        startPolling() {
+            this.stopPolling();
+            // 每5秒刷新一次
+            this.pollingTimer = setInterval(() => {
+                this.loadTasks(true);
+            }, 5000);
+        },
+
+        async loadTasks(silent = false) {
             try {
                 const tasks = await API.inference.list();
-                
+
                 if (tasks.length === 0) {
                     document.getElementById('inference-container').innerHTML = Components.emptyState(
                         'psychology',
@@ -729,7 +1019,9 @@ const Pages = {
                     document.getElementById('inference-container').innerHTML = tasks.map(t => Components.inferenceCard(t)).join('');
                 }
             } catch (error) {
-                Utils.toast.error('加载服务失败: ' + error.message);
+                if (!silent) {
+                    Utils.toast.error('加载服务失败: ' + error.message);
+                }
             }
         },
         
@@ -953,16 +1245,18 @@ const Pages = {
     
     // =========== 评估任务页面 ===========
     evaluation: {
+        pollingTimer: null,
+
         async render() {
             document.body.classList.remove('hide-header');
-            
+
             const toolbar = Components.toolbar(
                 '',
                 `<button class="btn btn-primary" onclick="Pages.evaluation.showCreateModal()">
                     <span class="material-icons">add</span> 创建评估任务
                 </button>`
             );
-            
+
             const content = `
                 ${Components.pageHeader('模型评估', '评估模型性能')}
                 ${toolbar}
@@ -970,15 +1264,31 @@ const Pages = {
                     ${Components.loading('加载评估任务...')}
                 </div>
             `;
-            
+
             document.getElementById('main-content').innerHTML = content;
             this.loadTasks();
+            this.startPolling();
         },
-        
-        async loadTasks() {
+
+        stopPolling() {
+            if (this.pollingTimer) {
+                clearInterval(this.pollingTimer);
+                this.pollingTimer = null;
+            }
+        },
+
+        startPolling() {
+            this.stopPolling();
+            // 每5秒刷新一次
+            this.pollingTimer = setInterval(() => {
+                this.loadTasks(true);
+            }, 5000);
+        },
+
+        async loadTasks(silent = false) {
             try {
                 const tasks = await API.evaluation.list();
-                
+
                 if (tasks.length === 0) {
                     document.getElementById('evaluation-container').innerHTML = Components.emptyState(
                         'analytics',
@@ -989,7 +1299,9 @@ const Pages = {
                     document.getElementById('evaluation-container').innerHTML = tasks.map(t => Components.evaluationCard(t)).join('');
                 }
             } catch (error) {
-                Utils.toast.error('加载任务失败: ' + error.message);
+                if (!silent) {
+                    Utils.toast.error('加载任务失败: ' + error.message);
+                }
             }
         },
         

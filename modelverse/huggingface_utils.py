@@ -614,8 +614,22 @@ def _download_worker(resource_id: int, resource: Resource, source: MirrorSource,
                                                 break
                                             
                                     # 如果文件大小不为零且包含有效文件，认为下载已完成
-                                    if total_size > 0 and (has_valid_files or file_count >= 2):
-                                        logger.info(f"长时间无变化且目录中有有效文件，认为下载已完成: {size_mb:.2f} MB, {file_count} 个文件")
+                                    # 改进检测：需要更多文件或关键文件存在
+                                    key_files = ['model.safetensors', 'pytorch_model.bin', 'config.json', 'tokenizer.json']
+                                    has_key_files = any(any(f.endswith(kf) for f in all_files) for kf in key_files)
+
+                                    if total_size > 0 and (has_key_files or file_count >= 5):
+                                        logger.info(f"检测到下载完成: {size_mb:.2f} MB, {file_count} 个文件, 包含关键文件: {has_key_files}")
+
+                                        # 更新进度为100%
+                                        _active_downloads[resource_id]["progress"] = 100.0
+                                        update_resource_status(
+                                            resource_id=resource_id,
+                                            status=DownloadStatus.COMPLETED,
+                                            progress=100.0,
+                                            local_path=save_dir
+                                        )
+
                                         download_completed.set()  # 设置下载完成标志
                                         return
                             else:
@@ -626,10 +640,18 @@ def _download_worker(resource_id: int, resource: Resource, source: MirrorSource,
                             last_count = file_count
                             last_check_time = current_time
                             
-                            # 动态更新进度 - 基于文件大小变化
+                            # 动态更新进度 - 基于文件大小和数量
                             if total_size > 0:
-                                # 估算进度，最小50%，最大95%
-                                estimated_progress = min(0.95, max(0.5, 0.5 + (total_size / (100 * 1024 * 1024)) * 0.4))
+                                # 综合文件大小和文件数量来估算进度
+                                # 文件大小权重70%，文件数量权重30%
+                                size_progress = min(0.95, 0.3 + (total_size / (1024 * 1024 * 1024)) * 0.65)  # 基于大小（假设1GB）
+                                count_progress = min(0.95, 0.3 + (file_count / 25) * 0.65)  # 基于数量（假设25个文件）
+                                estimated_progress = min(0.98, max(0.3, size_progress * 0.7 + count_progress * 0.3))
+
+                                # 确保进度不会减少
+                                current_progress = _active_downloads[resource_id].get("progress", 0)
+                                estimated_progress = max(current_progress, estimated_progress)
+
                                 _active_downloads[resource_id]["progress"] = estimated_progress
                                 update_resource_status(
                                     resource_id=resource_id,
@@ -972,11 +994,23 @@ def _download_worker(resource_id: int, resource: Resource, source: MirrorSource,
                     logger.error(f"下载过程中出错: {str(e)}")
                     raise e
             
-            # 检查下载结果
+            # 检查下载结果 - 改进检查逻辑，递归扫描所有文件
             if os.path.exists(save_dir):
-                files = [f for f in os.listdir(save_dir) if not f.startswith('.')]
-                if len(files) > 0:
-                    logger.info(f"下载完成，目录 {save_dir} 中有 {len(files)} 个文件")
+                # 递归检查所有文件（包括子目录）
+                all_files = []
+                for dirpath, dirnames, filenames in os.walk(save_dir):
+                    for filename in filenames:
+                        if not filename.startswith('.'):
+                            all_files.append(os.path.join(dirpath, filename))
+
+                logger.info(f"目录扫描结果: {save_dir} 中共有 {len(all_files)} 个文件")
+
+                # 检查关键文件
+                key_files = ['model.safetensors', 'pytorch_model.bin', 'config.json', 'tokenizer.json']
+                has_key_files = any(any(os.path.basename(f).endswith(kf) for kf in key_files) for f in all_files)
+
+                if len(all_files) > 0:
+                    logger.info(f"✓ 下载验证成功: 找到 {len(all_files)} 个文件, 包含关键文件: {has_key_files}")
                 else:
                     raise Exception(f"下载可能失败: 目录 {save_dir} 不包含任何文件")
             else:

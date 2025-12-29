@@ -82,13 +82,16 @@ class Router {
     
     // 处理路由
     async handleRoute() {
+        // 停止所有页面的轮询
+        this.stopAllPolling();
+
         const hash = window.location.hash.slice(1) || '/';
         const [path] = hash.split('?');
-        
+
         let matchedRoute = null;
         let matchedPath = null;
         let params = {};
-        
+
         // 查找匹配的路由
         for (const [routePath, config] of Object.entries(this.routes)) {
             const match = this.matchRoute(routePath, path);
@@ -99,13 +102,13 @@ class Router {
                 break;
             }
         }
-        
+
         // 默认路由
         if (!matchedRoute) {
             matchedRoute = this.routes['/'] || this.routes['/login'];
             matchedPath = '/';
         }
-        
+
         // 路由守卫
         if (this.beforeEach) {
             const result = await this.beforeEach({
@@ -114,20 +117,20 @@ class Router {
                 params,
                 route: matchedRoute
             });
-            
+
             if (result === false) {
                 return;
             }
-            
+
             if (typeof result === 'string') {
                 this.navigate(result);
                 return;
             }
         }
-        
+
         // 更新当前路由
         this.currentRoute = { path, matchedPath, params, route: matchedRoute };
-        
+
         // 执行路由处理器
         if (matchedRoute && matchedRoute.handler) {
             try {
@@ -137,9 +140,29 @@ class Router {
                 Utils.toast.error('页面加载失败');
             }
         }
-        
+
         // 更新导航状态
         this.updateNavigation(path);
+    }
+
+    // 停止所有轮询
+    stopAllPolling() {
+        // 停止资源管理轮询
+        if (window.Pages && window.Pages.resources) {
+            window.Pages.resources.stopPolling();
+        }
+        // 停止训练任务轮询
+        if (window.Pages && window.Pages.training) {
+            window.Pages.training.stopPolling();
+        }
+        // 停止推理服务轮询
+        if (window.Pages && window.Pages.inference) {
+            window.Pages.inference.stopPolling();
+        }
+        // 停止评估任务轮询
+        if (window.Pages && window.Pages.evaluation) {
+            window.Pages.evaluation.stopPolling();
+        }
     }
     
     // 更新导航高亮
