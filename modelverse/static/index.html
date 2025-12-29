@@ -4,19 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI-Tripod - 模型管理平台</title>
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.loli.net/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css?v=10">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
 </head>
 <body>
     <div id="app">
         <header class="app-header">
             <div class="header-left">
-                <a href="#/dashboard" class="logo">
+                <a href="#/home" class="logo">
                     <span class="logo-icon material-icons">rocket_launch</span>
                     <span class="logo-text">AI-Tripod</span>
                 </a>
                 <nav class="header-nav">
+                    <a href="#/home" class="nav-link">
+                        <span class="material-icons">home</span>
+                        <span>首页</span>
+                    </a>
                     <a href="#/dashboard" class="nav-link">
                         <span class="material-icons">dashboard</span>
                         <span>仪表盘</span>
@@ -70,6 +74,37 @@
         <main class="main-content" id="main-content">
             <div class="loading">加载中...</div>
         </main>
+        <footer class="app-footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3 class="footer-title">AI-Tripod</h3>
+                    <p class="footer-description">
+                        大模型集成训练平台，提供模型训练、推理、评估与导出的一体化解决方案
+                    </p>
+                </div>
+                <div class="footer-section">
+                    <h4 class="footer-heading">快速链接</h4>
+                    <ul class="footer-links">
+                        <li><a href="#/home">首页</a></li>
+                        <li><a href="#/resources">资源管理</a></li>
+                        <li><a href="#/training">模型训练</a></li>
+                        <li><a href="#/inference">推理服务</a></li>
+                        <li><a href="#/evaluation">模型评估</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4 class="footer-heading">关于</h4>
+                    <ul class="footer-links">
+                        <li><a href="#/dashboard">仪表盘</a></li>
+                        <li><a href="#/profile">个人设置</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 AI-Tripod. All rights reserved.</p>
+                <p class="footer-tech">Built with Django + Vanilla JavaScript</p>
+            </div>
+        </footer>
     </div>
     <div id="toast-container" class="toast-container"></div>
     <div id="modal-overlay" class="modal-overlay">
@@ -84,12 +119,12 @@
             <div class="modal-footer"></div>
         </div>
     </div>
-    <script src="/static/js/api.js?v=3"></script>
-    <script src="/static/js/utils.js?v=3"></script>
-    <script src="/static/js/router.js?v=3"></script>
-    <script src="/static/js/components.js?v=3"></script>
-    <script src="/static/js/pages.js?v=3"></script>
-    <script src="/static/js/app.js?v=3"></script>
+    <script src="/static/js/api.js?v=7"></script>
+    <script src="/static/js/utils.js?v=7"></script>
+    <script src="/static/js/router.js?v=7"></script>
+    <script src="/static/js/components.js?v=7"></script>
+    <script src="/static/js/pages.js?v=7"></script>
+    <script src="/static/js/app.js?v=7"></script>
     <script>
         const themeToggle = document.getElementById('theme-toggle');
         const themeIcon = themeToggle.querySelector('.material-icons');

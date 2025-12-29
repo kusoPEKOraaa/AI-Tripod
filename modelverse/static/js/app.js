@@ -50,7 +50,7 @@ const App = {
             
             // 已登录访问登录/注册页面
             if (isPublic && isLoggedIn) {
-                return '/dashboard';
+                return '/home';
             }
             
             // 管理员页面权限检查
@@ -64,7 +64,7 @@ const App = {
                 }
                 if (!this.user.is_admin) {
                     Utils.toast.error('无权访问此页面');
-                    return '/dashboard';
+                    return '/home';
                 }
             }
             
@@ -73,7 +73,8 @@ const App = {
         
         // 注册路由
         router.registerAll({
-            '/': { handler: () => router.navigate('/dashboard') },
+            '/': { handler: () => Pages.home.render() },
+            '/home': { handler: () => Pages.home.render() },
             '/login': { handler: () => Pages.auth.renderLogin() },
             '/register': { handler: () => Pages.auth.renderRegister() },
             '/dashboard': { handler: () => Pages.dashboard.render() },

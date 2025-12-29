@@ -168,8 +168,42 @@ def create_captcha_image(text, width=120, height=48):
 # app.include_router(conversations.router, prefix="/api/conversations", tags=["conversations"])
 
 @app.post("/token", response_model=Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = authenticate_user(form_data.username, form_data.password)
+async def login_for_access_token(request: Request):
+    # 获取所有表单数据
+    form_dict = await request.form()
+    username = form_dict.get('username', '').strip()
+    password = form_dict.get('password', '').strip()
+    captcha = form_dict.get('captcha', '').strip()
+    captcha_id = form_dict.get('captcha_id', '').strip()
+
+    # 添加调试日志
+    logger.info(
+        "Login attempt - username=%s captcha_id=%s captcha=%s stored=%s keys=%s",
+        username,
+        captcha_id,
+        captcha,
+        captcha_store.get(captcha_id) if captcha_id else None,
+        list(captcha_store.keys())[:5]
+    )
+
+    # 验证验证码
+    if not captcha_id or captcha_id not in captcha_store:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="验证码已过期，请刷新验证码"
+        )
+
+    if captcha_store[captcha_id].lower() != captcha.lower():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="验证码错误"
+        )
+
+    # 删除使用过的验证码
+    del captcha_store[captcha_id]
+
+    # 验证用户名和密码
+    user = authenticate_user(username, password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -480,15 +514,15 @@ async def remove_resource(
     resource = get_resource(resource_id=resource_id)
     if not resource:
         raise HTTPException(status_code=404, detail="资源不存在")
-    
+
     # 检查删除权限
     if not current_user.is_admin and resource.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="无权删除此资源")
-    
+
     # 如果资源正在下载，先停止下载
     if resource.status == DownloadStatus.DOWNLOADING:
         hf_utils.stop_download(resource_id)
-    
+
     # 删除实际文件
     if resource.local_path:
         try:
@@ -496,7 +530,7 @@ async def remove_resource(
             # 确保路径是在允许的目录内
             allowed_dirs = ["./models", "./datasets"]
             is_allowed = any(str(local_path).startswith(d) for d in allowed_dirs)
-            
+
             if is_allowed and local_path.exists():
                 logger.info(f"删除资源文件: {local_path}")
                 # 如果是目录，递归删除
@@ -511,10 +545,51 @@ async def remove_resource(
         except Exception as e:
             logger.error(f"删除资源文件失败: {str(e)}")
             # 继续删除数据库记录，即使文件删除失败
-    
+
     # 删除资源记录
     delete_resource(resource_id=resource_id)
     return Response(status_code=204)
+
+@app.put("/api/resources/{resource_id}", response_model=Resource)
+async def update_resource(
+    resource_id: int,
+    update_data: Dict[str, Any],
+    current_user: User = Depends(get_current_active_user)
+):
+    """更新资源状态（用于手动修复下载状态）"""
+    resource = get_resource(resource_id=resource_id)
+    if not resource:
+        raise HTTPException(status_code=404, detail="资源不存在")
+
+    # 检查更新权限
+    if not current_user.is_admin and resource.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="无权更新此资源")
+
+    # 更新状态
+    if update_data:
+        status = update_data.get("status")
+        progress = update_data.get("progress")
+        local_path = update_data.get("local_path")
+
+        # 转换状态
+        download_status = None
+        if status is not None:
+            try:
+                download_status = DownloadStatus(status)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"无效的状态值: {status}")
+
+        # 执行更新
+        update_resource_status(
+            resource_id=resource_id,
+            status=download_status,
+            progress=progress,
+            local_path=local_path
+        )
+        # 重新获取更新后的资源
+        resource = get_resource(resource_id=resource_id)
+
+    return resource
 
 @app.post("/api/resources/{resource_id}/download", response_model=Resource)
 async def start_resource_download(
