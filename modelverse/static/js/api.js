@@ -417,6 +417,11 @@ const API = {
         // 删除用户
         delete(id) {
             return API.delete(`/users/${id}`);
+        },
+
+        // 设置用户权限
+        setPermissions(id, permissions) {
+            return API.put(`/users/${id}/permissions`, permissions);
         }
     },
     

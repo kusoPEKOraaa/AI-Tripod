@@ -15,7 +15,7 @@ const Components = {
     },
     
     // =========== 统计卡片 ===========
-    statCard(icon, label, value, color = '') {
+    statCard(icon, label, value, color = '', sparkline = '') {
         return `
             <div class="stat-card">
                 <div class="stat-icon" ${color ? `style="color:${color}"` : ''}>
@@ -25,6 +25,7 @@ const Components = {
                     <div class="stat-value">${value}</div>
                     <div class="stat-label">${label}</div>
                 </div>
+                ${sparkline ? `<div class="stat-sparkline">${sparkline}</div>` : ''}
             </div>
         `;
     },
@@ -301,6 +302,9 @@ const Components = {
                 <td>${user.is_admin ? '<span style="color:var(--success)">是</span>' : '否'}</td>
                 <td>${Utils.format.date(user.created_at)}</td>
                 <td>
+                    <button class="btn btn-sm btn-outline" onclick="Pages.admin.showPermissionsModal(${user.id}, '${user.username}')" ${user.is_admin ? 'disabled' : ''} style="margin-right: 5px;">
+                        <span class="material-icons">settings</span>
+                    </button>
                     <button class="btn btn-sm btn-danger" onclick="Pages.admin.deleteUser(${user.id})" ${user.is_admin ? 'disabled' : ''}>
                         <span class="material-icons">delete</span>
                     </button>

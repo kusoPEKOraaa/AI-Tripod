@@ -170,24 +170,28 @@ const Utils = {
             
             let formHtml = '<form id="modal-form">';
             fields.forEach(field => {
-                formHtml += `
-                    <div class="form-group">
-                        <label>${field.label}${field.required ? ' <span style="color:var(--error)">*</span>' : ''}</label>
-                `;
-                
-                if (field.type === 'select') {
-                    formHtml += `<select class="form-control form-select" name="${field.name}" ${field.required ? 'required' : ''}>`;
-                    field.options.forEach(opt => {
-                        formHtml += `<option value="${opt.value}" ${opt.value === field.value ? 'selected' : ''}>${opt.label}</option>`;
-                    });
-                    formHtml += '</select>';
-                } else if (field.type === 'textarea') {
-                    formHtml += `<textarea class="form-control" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.placeholder || ''}">${field.value || ''}</textarea>`;
+                if (field.type === 'html') {
+                    formHtml += field.html;
                 } else {
-                    formHtml += `<input type="${field.type || 'text'}" class="form-control" name="${field.name}" value="${field.value || ''}" ${field.required ? 'required' : ''} placeholder="${field.placeholder || ''}">`;
+                    formHtml += `
+                        <div class="form-group">
+                            <label>${field.label}${field.required ? ' <span style="color:var(--error)">*</span>' : ''}</label>
+                    `;
+                    
+                    if (field.type === 'select') {
+                        formHtml += `<select class="form-control form-select" name="${field.name}" ${field.required ? 'required' : ''}>`;
+                        field.options.forEach(opt => {
+                            formHtml += `<option value="${opt.value}" ${opt.value === field.value ? 'selected' : ''}>${opt.label}</option>`;
+                        });
+                        formHtml += '</select>';
+                    } else if (field.type === 'textarea') {
+                        formHtml += `<textarea class="form-control" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.placeholder || ''}">${field.value || ''}</textarea>`;
+                    } else {
+                        formHtml += `<input type="${field.type || 'text'}" class="form-control" name="${field.name}" value="${field.value || ''}" ${field.required ? 'required' : ''} placeholder="${field.placeholder || ''}">`;
+                    }
+                    
+                    formHtml += '</div>';
                 }
-                
-                formHtml += '</div>';
             });
             formHtml += '</form>';
             
@@ -485,6 +489,27 @@ const Utils = {
     // 生成唯一 ID
     generateId() {
         return `id_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    },
+    
+    // 生成 SVG Sparkline
+    generateSparkline(width, height, points = 10) {
+        const data = [];
+        for (let i = 0; i < points; i++) {
+            data.push(Math.random() * height);
+        }
+        
+        const step = width / (points - 1);
+        let path = `M 0 ${height - data[0]}`;
+        
+        for (let i = 1; i < points; i++) {
+            path += ` L ${i * step} ${height - data[i]}`;
+        }
+        
+        return `
+            <svg class="sparkline" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+                <path d="${path}" />
+            </svg>
+        `;
     },
     
     // 解析查询参数

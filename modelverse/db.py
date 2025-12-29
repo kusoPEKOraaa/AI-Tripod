@@ -8,7 +8,8 @@ from models import RegisterRequest, UserResponse, User, UserRole, LoginRequest, 
 
 def get_db_connection():
     """获取数据库连接"""
-    conn = sqlite3.connect('modelverse.db')
+    db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'modelverse.db')
+    conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn
 

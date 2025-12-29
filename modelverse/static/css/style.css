@@ -2,40 +2,44 @@
 
 /* ========== CSS 变量 ========== */
 :root {
-    /* 颜色 - 黑白灰色调 */
-    --primary: #333333;
-    --primary-light: #555555;
-    --primary-dark: #1a1a1a;
-    --secondary: #666666;
-    --accent: #888888;
+    /* 颜色 - Google 风格 & 大模型训练科技风 (蓝/青) */
+    --primary: #0b57d0;          /* Google Blue - 核心操作 */
+    --primary-light: #4285f4;    /* Lighter Blue */
+    --primary-dark: #0842a0;     /* Darker Blue */
+    
+    --secondary: #00bcd4;        /* Cyan - 强调色 */
+    --secondary-light: #e0f7fa;  /* Light Cyan background */
+    
+    --accent: #1967d2;           /* Accent Blue */
     
     /* 背景色 */
     --bg-primary: #ffffff;
-    --bg-secondary: #f5f5f5;
-    --bg-tertiary: #eeeeee;
+    --bg-secondary: #f8f9fa;     /* Google Gray Background */
+    --bg-tertiary: #f1f3f4;      /* Slightly darker gray */
     --bg-card: #ffffff;
     
     /* 文字色 */
-    --text-primary: #1a1a1a;
-    --text-secondary: #666666;
-    --text-tertiary: #999999;
+    --text-primary: #202124;     /* High emphasis */
+    --text-secondary: #5f6368;   /* Medium emphasis */
+    --text-tertiary: #80868b;    /* Low emphasis */
     --text-on-primary: #ffffff;
     
     /* 边框 */
-    --border-color: #e0e0e0;
-    --border-radius: 8px;
-    --border-radius-lg: 12px;
+    --border-color: #dadce0;
+    --border-radius: 8px;        /* Standard Google curve */
+    --border-radius-lg: 16px;    /* Larger curves for cards */
+    --border-radius-pill: 999px; /* Pill shapes */
     
-    /* 阴影 */
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+    /* 阴影 - Material Elevation */
+    --shadow-sm: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
+    --shadow-md: 0 1px 3px 0 rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15);
+    --shadow-lg: 0 4px 8px 3px rgba(60,64,67,0.15), 0 1px 3px rgba(60,64,67,0.3);
     
     /* 状态色 */
-    --success: #4caf50;
-    --warning: #ff9800;
-    --error: #f44336;
-    --info: #2196f3;
+    --success: #1e8e3e;          /* Google Green */
+    --warning: #f9ab00;          /* Google Yellow/Amber */
+    --error: #d93025;            /* Google Red */
+    --info: #1a73e8;             /* Google Blue */
     
     /* 间距 */
     --spacing-xs: 4px;
@@ -45,37 +49,100 @@
     --spacing-xl: 32px;
     
     /* 尺寸 */
-    --header-height: 60px;
-    --sidebar-width: 240px;
+    --header-height: 64px;
+    --sidebar-width: 256px;
     
     /* 过渡 */
-    --transition-fast: 0.15s ease;
-    --transition-normal: 0.3s ease;
+    --transition-fast: 0.15s cubic-bezier(0.4, 0.0, 0.2, 1);
+    --transition-normal: 0.25s cubic-bezier(0.4, 0.0, 0.2, 1);
+    
+    /* 动画 */
+    --slide-up-fade: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* 深色主题 */
+/* 深色主题 (暂未完全适配，保留基础映射) */
 [data-theme="dark"] {
-    --primary: #e0e0e0;
-    --primary-light: #f5f5f5;
-    --primary-dark: #bdbdbd;
-    --secondary: #9e9e9e;
-    --accent: #757575;
+    --primary: #8ab4f8;
+    --primary-light: #aecbfa;
+    --primary-dark: #669df6;
+    --secondary: #24c1e0;
+    --accent: #8ab4f8;
     
-    --bg-primary: #1a1a1a;
-    --bg-secondary: #242424;
-    --bg-tertiary: #2d2d2d;
-    --bg-card: #2d2d2d;
+    --bg-primary: #202124;
+    --bg-secondary: #292a2d;
+    --bg-tertiary: #303134;
+    --bg-card: #2d2e30;
     
-    --text-primary: #f5f5f5;
-    --text-secondary: #bdbdbd;
-    --text-tertiary: #9e9e9e;
-    --text-on-primary: #1a1a1a;
+    --text-primary: #e8eaed;
+    --text-secondary: #9aa0a6;
+    --text-tertiary: #80868b;
+    --text-on-primary: #202124;
     
-    --border-color: #424242;
+    --border-color: #5f6368;
     
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.4);
+    --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.3), 0 1px 3px 1px rgba(0,0,0,0.15);
+    --shadow-md: 0 1px 3px 0 rgba(0,0,0,0.3), 0 4px 8px 3px rgba(0,0,0,0.15);
+    --shadow-lg: 0 4px 8px 3px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.3);
+}
+
+/* 动画定义 */
+@keyframes slideUpFade {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stagger-animate {
+    opacity: 0; /* Initially hidden */
+    animation: var(--slide-up-fade);
+}
+
+/* Hero Banner (Removed) */
+
+/* Ghost Decoration */
+.main-content::before {
+    content: '';
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80vw;
+    height: 80vh;
+    background: radial-gradient(circle, rgba(11, 87, 208, 0.03) 0%, rgba(255, 255, 255, 0) 70%);
+    z-index: 0;
+    pointer-events: none;
+    border-radius: 50%;
+}
+
+/* Ensure content is above decoration */
+.main-content > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Canvas Background */
+#bg-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+}
+
+.auth-page {
+    position: relative;
+    /* Ensure canvas is behind content */
+}
+
+.auth-card {
+    position: relative;
+    z-index: 1;
 }
 
 /* ========== 重置样式 ========== */
@@ -91,7 +158,7 @@ html {
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Google Sans', Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
     background-color: var(--bg-secondary);
     color: var(--text-primary);
     line-height: 1.5;
@@ -105,7 +172,7 @@ a {
 }
 
 a:hover {
-    color: var(--primary-light);
+    color: var(--primary-dark);
 }
 
 button {
@@ -125,6 +192,18 @@ input, textarea, select {
     flex-direction: column;
 }
 
+.app-layout {
+    height: 100vh;
+    overflow: hidden;
+}
+
+.app-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
 /* ========== 头部导航 ========== */
 .app-header {
     height: var(--header-height);
@@ -133,15 +212,20 @@ input, textarea, select {
     display: flex;
     align-items: center;
     padding: 0 var(--spacing-lg);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    box-shadow: var(--shadow-sm);
+    position: relative;
+    z-index: 200;
+    box-shadow: none; /* Google Console often flat with border */
 }
 
 .header-left {
     display: flex;
     align-items: center;
+    min-width: 240px; /* Align with sidebar width approx */
+}
+
+.sidebar-toggle {
+    margin-right: var(--spacing-sm);
+    color: var(--text-secondary);
 }
 
 .logo {
@@ -149,8 +233,9 @@ input, textarea, select {
     align-items: center;
     gap: var(--spacing-sm);
     font-size: 1.25rem;
-    font-weight: 700;
+    font-weight: 400; /* Product Sans style */
     color: var(--text-primary);
+    text-decoration: none;
 }
 
 .logo:hover {
@@ -158,31 +243,63 @@ input, textarea, select {
 }
 
 .logo-icon {
-    font-size: 2rem;
+    font-size: 1.75rem;
     color: var(--primary);
 }
 
 .logo-text {
-    letter-spacing: -0.5px;
+    letter-spacing: -0.2px;
 }
 
-.header-nav {
+.header-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+}
+
+.header-right {
+    margin-left: auto;
     display: flex;
     align-items: center;
-    gap: var(--spacing-xs);
-    margin-left: var(--spacing-xl);
+    gap: var(--spacing-md);
+}
+
+/* ========== 侧边栏 ========== */
+.app-sidebar {
+    width: var(--sidebar-width);
+    background-color: var(--bg-card);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    transition: width var(--transition-normal);
+    z-index: 100;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.app-sidebar.collapsed {
+    width: 72px;
+}
+
+.sidebar-nav {
+    padding: var(--spacing-md) var(--spacing-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .nav-link {
     display: flex;
     align-items: center;
-    gap: var(--spacing-xs);
-    padding: var(--spacing-sm) var(--spacing-md);
-    border-radius: var(--border-radius);
+    gap: var(--spacing-md);
+    padding: 10px 16px;
+    border-radius: 24px; /* Pill shape */
     color: var(--text-secondary);
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
     font-weight: 500;
     transition: all var(--transition-fast);
+    white-space: nowrap;
+    text-decoration: none;
 }
 
 .nav-link:hover {
@@ -191,19 +308,50 @@ input, textarea, select {
 }
 
 .nav-link.active {
-    background-color: var(--primary);
-    color: var(--text-on-primary);
+    background-color: var(--secondary-light);
+    color: var(--primary-dark);
 }
 
 .nav-link .material-icons {
-    font-size: 1.25rem;
+    font-size: 1.5rem;
+    min-width: 24px; /* Fixed width for alignment in collapsed mode */
 }
 
-.header-right {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
+.nav-divider {
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 8px 16px;
+}
+
+.sidebar-footer {
+    margin-top: auto;
+    padding: var(--spacing-md);
+    text-align: center;
+}
+
+.version-text {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+}
+
+/* Collapsed state adjustments */
+.app-sidebar.collapsed .logo-text,
+.app-sidebar.collapsed .nav-link span:not(.material-icons),
+.app-sidebar.collapsed .version-text {
+    display: none;
+}
+
+.app-sidebar.collapsed .nav-link {
+    justify-content: center;
+    padding: 10px 0;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 4px;
+}
+
+.app-sidebar.collapsed .sidebar-nav {
+    padding: var(--spacing-md) 8px;
 }
 
 .icon-btn {
@@ -231,22 +379,24 @@ input, textarea, select {
 .user-btn {
     display: flex;
     align-items: center;
-    gap: var(--spacing-xs);
+    gap: var(--spacing-sm);
     padding: var(--spacing-xs) var(--spacing-sm);
-    border: none;
+    border: 1px solid transparent;
     background: transparent;
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-pill);
     color: var(--text-primary);
     transition: all var(--transition-fast);
 }
 
 .user-btn:hover {
     background-color: var(--bg-secondary);
+    border-color: var(--border-color);
 }
 
 .username {
     font-weight: 500;
-    max-width: 100px;
+    font-size: 0.875rem;
+    max-width: 120px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -254,19 +404,20 @@ input, textarea, select {
 
 .dropdown-menu {
     position: absolute;
-    top: 100%;
+    top: 110%;
     right: 0;
     margin-top: var(--spacing-xs);
-    min-width: 180px;
+    min-width: 200px;
     background-color: var(--bg-card);
-    border: 1px solid var(--border-color);
+    border: none;
     border-radius: var(--border-radius);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-md);
     opacity: 0;
     visibility: hidden;
     transform: translateY(-10px);
     transition: all var(--transition-fast);
     z-index: 1000;
+    padding: var(--spacing-xs) 0;
 }
 
 .dropdown-menu.show {
@@ -278,20 +429,25 @@ input, textarea, select {
 .dropdown-item {
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-sm) var(--spacing-md);
+    gap: var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-lg);
     color: var(--text-primary);
+    font-size: 0.875rem;
     transition: background-color var(--transition-fast);
 }
 
 .dropdown-item:hover {
     background-color: var(--bg-secondary);
-    color: var(--text-primary);
+    color: var(--primary);
 }
 
 .dropdown-item .material-icons {
     font-size: 1.25rem;
     color: var(--text-secondary);
+}
+
+.dropdown-item:hover .material-icons {
+    color: var(--primary);
 }
 
 .dropdown-divider {
@@ -311,21 +467,23 @@ input, textarea, select {
 /* ========== 主内容区 ========== */
 .main-content {
     flex: 1;
-    padding: var(--spacing-lg);
-    max-width: 1400px;
-    margin: 0 auto;
+    padding: var(--spacing-xl) var(--spacing-lg);
+    max-width: 1600px; /* Increased for wider screens */
+    margin: 0; /* Remove auto margin */
     width: 100%;
+    overflow-y: auto;
+    background-color: var(--bg-secondary);
 }
 
 /* ========== 页面通用样式 ========== */
 .page {
-    animation: fadeIn 0.3s ease;
+    animation: fadeIn 0.25s ease;
 }
 
 @keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateY(8px);
     }
     to {
         opacity: 1;
@@ -334,18 +492,20 @@ input, textarea, select {
 }
 
 .page-header {
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
 }
 
 .page-header h1 {
     font-size: 1.75rem;
-    font-weight: 600;
+    font-weight: 400;
+    color: var(--text-primary);
     margin-bottom: var(--spacing-xs);
 }
 
 .page-header .subtitle {
     color: var(--text-secondary);
-    font-size: 0.9375rem;
+    font-size: 1rem;
+    font-weight: 400;
 }
 
 /* ========== 卡片 ========== */
@@ -353,7 +513,14 @@ input, textarea, select {
     background-color: var(--bg-card);
     border-radius: var(--border-radius-lg);
     box-shadow: var(--shadow-sm);
+    border: 1px solid transparent;
+    transition: box-shadow var(--transition-normal);
     overflow: hidden;
+    margin-bottom: var(--spacing-lg);
+}
+
+.card:hover {
+    box-shadow: var(--shadow-md);
 }
 
 .card-header {
@@ -362,19 +529,21 @@ input, textarea, select {
     justify-content: space-between;
     padding: var(--spacing-md) var(--spacing-lg);
     border-bottom: 1px solid var(--border-color);
+    background-color: transparent;
 }
 
 .card-header h3 {
-    font-size: 1rem;
-    font-weight: 600;
+    font-size: 1.125rem;
+    font-weight: 500;
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
+    color: var(--text-primary);
 }
 
 .card-header h3 .material-icons {
     font-size: 1.25rem;
-    color: var(--text-secondary);
+    color: var(--primary);
 }
 
 .card-body {
@@ -386,14 +555,17 @@ input, textarea, select {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: var(--spacing-xs);
-    padding: var(--spacing-sm) var(--spacing-md);
+    gap: var(--spacing-sm);
+    padding: 0 24px;
+    height: 36px;
     font-size: 0.875rem;
     font-weight: 500;
-    border-radius: var(--border-radius);
+    border-radius: 4px; /* Material Design button radius usually 4px */
     border: none;
     transition: all var(--transition-fast);
     white-space: nowrap;
+    letter-spacing: 0.25px;
+    text-transform: none; /* Google style prefers no caps */
 }
 
 .btn .material-icons {
@@ -403,29 +575,35 @@ input, textarea, select {
 .btn-primary {
     background-color: var(--primary);
     color: var(--text-on-primary);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .btn-primary:hover {
     background-color: var(--primary-dark);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .btn-secondary {
-    background-color: var(--bg-tertiary);
-    color: var(--text-primary);
+    background-color: white;
+    color: var(--primary);
+    border: 1px solid var(--border-color);
 }
 
 .btn-secondary:hover {
-    background-color: var(--border-color);
+    background-color: var(--secondary-light);
+    border-color: transparent;
 }
 
 .btn-outline {
     background-color: transparent;
     border: 1px solid var(--border-color);
-    color: var(--text-primary);
+    color: var(--text-secondary);
 }
 
 .btn-outline:hover {
     background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
 }
 
 .btn-success {
@@ -434,16 +612,13 @@ input, textarea, select {
 }
 
 .btn-success:hover {
-    filter: brightness(0.9);
+    filter: brightness(0.95);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
 }
 
 .btn-warning {
     background-color: var(--warning);
     color: white;
-}
-
-.btn-warning:hover {
-    filter: brightness(0.9);
 }
 
 .btn-danger {
@@ -452,31 +627,35 @@ input, textarea, select {
 }
 
 .btn-danger:hover {
-    filter: brightness(0.9);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
 }
 
 .btn-sm {
-    padding: var(--spacing-xs) var(--spacing-sm);
+    height: 32px;
+    padding: 0 16px;
     font-size: 0.8125rem;
 }
 
 .btn-lg {
-    padding: var(--spacing-md) var(--spacing-lg);
+    height: 48px;
+    padding: 0 32px;
     font-size: 1rem;
 }
 
 .btn-block {
     width: 100%;
+    display: flex;
 }
 
 .btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+    box-shadow: none;
 }
 
 /* ========== 表单 ========== */
 .form-group {
-    margin-bottom: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
 }
 
 .form-group label {
@@ -489,10 +668,10 @@ input, textarea, select {
 
 .form-control {
     width: 100%;
-    padding: var(--spacing-sm) var(--spacing-md);
-    font-size: 0.9375rem;
+    padding: 10px 12px;
+    font-size: 1rem;
     border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
+    border-radius: 4px;
     background-color: var(--bg-card);
     color: var(--text-primary);
     transition: all var(--transition-fast);
@@ -501,7 +680,7 @@ input, textarea, select {
 .form-control:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(51, 51, 51, 0.1);
+    box-shadow: 0 0 0 2px rgba(11, 87, 208, 0.1);
 }
 
 .form-control::placeholder {
@@ -510,7 +689,7 @@ input, textarea, select {
 
 .form-select {
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23666' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%235f6368' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 8px center;
     padding-right: 32px;
@@ -524,9 +703,9 @@ textarea.form-control {
 /* ========== 统计卡片 ========== */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-lg);
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
 }
 
 .stat-card {
@@ -537,6 +716,12 @@ textarea.form-control {
     align-items: center;
     gap: var(--spacing-md);
     box-shadow: var(--shadow-sm);
+    border: 1px solid transparent;
+    transition: box-shadow var(--transition-fast);
+}
+
+.stat-card:hover {
+    box-shadow: var(--shadow-md);
 }
 
 .stat-icon {
@@ -545,8 +730,8 @@ textarea.form-control {
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--bg-secondary);
-    border-radius: var(--border-radius);
+    background-color: var(--secondary-light);
+    border-radius: 50%;
 }
 
 .stat-icon .material-icons {
@@ -559,13 +744,16 @@ textarea.form-control {
 }
 
 .stat-value {
-    font-size: 1.5rem;
-    font-weight: 700;
+    font-size: 1.75rem;
+    font-weight: 400;
+    color: var(--text-primary);
+    line-height: 1.2;
 }
 
 .stat-label {
     font-size: 0.875rem;
     color: var(--text-secondary);
+    margin-top: 4px;
 }
 
 /* ========== 工具栏 ========== */
@@ -576,6 +764,10 @@ textarea.form-control {
     margin-bottom: var(--spacing-lg);
     flex-wrap: wrap;
     gap: var(--spacing-md);
+    background-color: var(--bg-card);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
 }
 
 .toolbar-left, .toolbar-right {
@@ -592,14 +784,14 @@ textarea.form-control {
 /* ========== 网格布局 ========== */
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: var(--spacing-lg);
 }
 
 .resources-grid, .tasks-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: var(--spacing-md);
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--spacing-lg);
 }
 
 /* ========== 资源卡片 ========== */
@@ -607,108 +799,116 @@ textarea.form-control {
     background-color: var(--bg-card);
     border-radius: var(--border-radius-lg);
     box-shadow: var(--shadow-sm);
-    padding: var(--spacing-md);
-    transition: all var(--transition-fast);
+    padding: var(--spacing-lg);
+    transition: all var(--transition-normal);
+    border: 1px solid transparent;
 }
 
 .resource-card:hover, .task-card:hover {
     box-shadow: var(--shadow-md);
     transform: translateY(-2px);
+    border-color: var(--border-color);
 }
 
 .resource-header, .task-header {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    margin-bottom: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
 }
 
 .resource-name, .task-name {
-    font-size: 1rem;
-    font-weight: 600;
+    font-size: 1.125rem;
+    font-weight: 500;
     margin-bottom: var(--spacing-xs);
+    color: var(--text-primary);
 }
 
 .resource-type, .resource-status {
     font-size: 0.75rem;
-    padding: 2px 8px;
-    border-radius: 4px;
+    padding: 4px 12px;
+    border-radius: 12px;
     font-weight: 500;
+    letter-spacing: 0.3px;
 }
 
 .type-model {
-    background-color: #e3f2fd;
-    color: #1976d2;
+    background-color: var(--secondary-light);
+    color: var(--primary-dark);
 }
 
 .type-dataset {
-    background-color: #e8f5e9;
-    color: #388e3c;
+    background-color: #fce8e6;
+    color: #c5221f;
 }
 
 .resource-info {
-    margin-bottom: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
 }
 
 .resource-repo {
     font-size: 0.8125rem;
     color: var(--text-secondary);
-    font-family: monospace;
+    font-family: 'Roboto Mono', monospace;
     background-color: var(--bg-secondary);
-    padding: 2px 6px;
+    padding: 4px 8px;
     border-radius: 4px;
 }
 
 .resource-description {
     font-size: 0.875rem;
     color: var(--text-secondary);
-    margin-top: var(--spacing-xs);
+    margin-top: var(--spacing-sm);
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    line-height: 1.5;
 }
 
 .resource-actions, .task-actions {
     display: flex;
-    gap: var(--spacing-xs);
+    gap: var(--spacing-sm);
     flex-wrap: wrap;
+    margin-top: auto;
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--bg-secondary);
 }
 
 /* ========== 状态徽章 ========== */
 .status-badge {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     font-size: 0.75rem;
-    padding: 4px 10px;
-    border-radius: 12px;
+    padding: 4px 12px;
+    border-radius: 16px;
     font-weight: 500;
 }
 
 .status-pending {
-    background-color: #fff3e0;
-    color: #e65100;
+    background-color: #fef7e0;
+    color: #b06000;
 }
 
 .status-downloading, .status-running, .status-creating {
-    background-color: #e3f2fd;
-    color: #1565c0;
+    background-color: var(--secondary-light);
+    color: var(--primary-dark);
 }
 
 .status-completed {
-    background-color: #e8f5e9;
-    color: #2e7d32;
+    background-color: #e6f4ea;
+    color: #137333;
 }
 
 .status-failed {
-    background-color: #ffebee;
-    color: #c62828;
+    background-color: #fce8e6;
+    color: #c5221f;
 }
 
 .status-stopped, .status-cancelled {
-    background-color: #f5f5f5;
-    color: #616161;
+    background-color: #f1f3f4;
+    color: #5f6368;
 }
 
 /* ========== 进度条 ========== */
@@ -717,25 +917,26 @@ textarea.form-control {
 }
 
 .progress-bar {
-    height: 8px;
-    background-color: var(--bg-secondary);
-    border-radius: 4px;
+    height: 6px;
+    background-color: var(--bg-tertiary);
+    border-radius: 3px;
     overflow: hidden;
 }
 
 .progress-fill {
     height: 100%;
     background-color: var(--primary);
-    border-radius: 4px;
-    transition: width 0.3s ease;
+    border-radius: 3px;
+    transition: width 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 
 .progress-text {
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
     color: var(--text-secondary);
     margin-top: var(--spacing-xs);
     display: block;
     text-align: right;
+    font-weight: 500;
 }
 
 /* ========== 认证页面 ========== */
@@ -745,40 +946,46 @@ textarea.form-control {
     align-items: center;
     justify-content: center;
     padding: var(--spacing-lg);
-    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+    background-color: var(--bg-secondary);
+    /* Remove gradient for cleaner look */
+    background: var(--bg-secondary); 
 }
 
 .auth-card {
     width: 100%;
-    max-width: 400px;
+    max-width: 448px; /* Standard Google Login width */
     background-color: var(--bg-card);
-    border-radius: var(--border-radius-lg);
-    box-shadow: var(--shadow-lg);
-    padding: var(--spacing-xl);
+    border-radius: 28px; /* Newer Google Material shape */
+    box-shadow: var(--shadow-sm); /* Flatter look */
+    padding: 48px 40px 36px;
+    border: 1px solid var(--border-color);
 }
 
 .auth-header {
     text-align: center;
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: 40px;
 }
 
 .auth-icon {
-    font-size: 3rem;
+    font-size: 48px;
     color: var(--primary);
+    margin-bottom: var(--spacing-sm);
 }
 
 .auth-header h1 {
     font-size: 1.5rem;
-    margin: var(--spacing-sm) 0 var(--spacing-xs);
+    font-weight: 400;
+    margin: var(--spacing-sm) 0;
+    color: var(--text-primary);
 }
 
 .auth-header p {
     color: var(--text-secondary);
-    font-size: 0.9375rem;
+    font-size: 1rem;
 }
 
 .auth-form {
-    margin-bottom: var(--spacing-md);
+    margin-bottom: var(--spacing-xl);
 }
 
 .auth-footer {
@@ -789,7 +996,7 @@ textarea.form-control {
 
 .captcha-group .captcha-input {
     display: flex;
-    gap: var(--spacing-sm);
+    gap: var(--spacing-md);
 }
 
 .captcha-group .captcha-input input {
@@ -798,7 +1005,7 @@ textarea.form-control {
 
 .captcha-img {
     height: 42px;
-    border-radius: var(--border-radius);
+    border-radius: 4px;
     cursor: pointer;
     border: 1px solid var(--border-color);
 }
@@ -807,28 +1014,32 @@ textarea.form-control {
 .quick-actions {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: var(--spacing-md);
+    gap: var(--spacing-lg);
 }
 
 .quick-action-btn {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-lg);
-    background-color: var(--bg-secondary);
-    border-radius: var(--border-radius);
+    gap: var(--spacing-md);
+    padding: var(--spacing-xl);
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
     color: var(--text-primary);
     transition: all var(--transition-fast);
 }
 
 .quick-action-btn:hover {
-    background-color: var(--primary);
-    color: var(--text-on-primary);
+    background-color: var(--secondary-light);
+    color: var(--primary-dark);
+    border-color: var(--primary-light);
+    box-shadow: var(--shadow-sm);
 }
 
 .quick-action-btn .material-icons {
-    font-size: 2rem;
+    font-size: 2.5rem;
+    color: var(--primary);
 }
 
 /* ========== GPU 状态 ========== */
@@ -842,11 +1053,13 @@ textarea.form-control {
     background-color: var(--bg-secondary);
     padding: var(--spacing-md);
     border-radius: var(--border-radius);
+    border: 1px solid transparent;
 }
 
 .gpu-name {
-    font-weight: 600;
+    font-weight: 500;
     margin-bottom: var(--spacing-sm);
+    color: var(--text-primary);
 }
 
 .gpu-memory {
@@ -877,6 +1090,7 @@ textarea.form-control {
 .chat-info h2 {
     font-size: 1.25rem;
     margin-bottom: var(--spacing-xs);
+    font-weight: 400;
 }
 
 .chat-container {
@@ -886,12 +1100,14 @@ textarea.form-control {
     background-color: var(--bg-card);
     border-radius: var(--border-radius-lg);
     overflow: hidden;
+    border: 1px solid var(--border-color);
 }
 
 .messages-container {
     flex: 1;
     overflow-y: auto;
     padding: var(--spacing-lg);
+    background-color: #fff;
 }
 
 .welcome-message {
@@ -901,14 +1117,18 @@ textarea.form-control {
 }
 
 .welcome-message .material-icons {
-    font-size: 3rem;
+    font-size: 4rem;
     margin-bottom: var(--spacing-md);
+    color: var(--primary-light);
 }
 
 .message {
-    margin-bottom: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
     display: flex;
-    gap: var(--spacing-sm);
+    gap: var(--spacing-md);
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .message.user {
@@ -916,13 +1136,14 @@ textarea.form-control {
 }
 
 .message-avatar {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    font-size: 14px;
 }
 
 .message.user .message-avatar {
@@ -931,39 +1152,53 @@ textarea.form-control {
 }
 
 .message.assistant .message-avatar {
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
+    background-color: var(--secondary);
+    color: white;
 }
 
 .message-content {
-    max-width: 70%;
-    padding: var(--spacing-sm) var(--spacing-md);
-    border-radius: var(--border-radius-lg);
-    line-height: 1.6;
+    max-width: 80%;
+    padding: 12px 16px;
+    border-radius: 18px;
+    line-height: 1.5;
+    font-size: 0.9375rem;
 }
 
 .message.user .message-content {
-    background-color: var(--primary);
-    color: var(--text-on-primary);
+    background-color: var(--secondary-light);
+    color: var(--text-primary);
     border-bottom-right-radius: 4px;
 }
 
 .message.assistant .message-content {
     background-color: var(--bg-secondary);
+    color: var(--text-primary);
     border-bottom-left-radius: 4px;
 }
 
 .input-container {
-    padding: var(--spacing-md);
+    padding: var(--spacing-lg);
     border-top: 1px solid var(--border-color);
+    background-color: var(--bg-card);
+    max-width: 800px;
+    margin: 0 auto;
+    width: 100%;
 }
 
 .input-wrapper {
     display: flex;
     gap: var(--spacing-sm);
     background-color: var(--bg-secondary);
-    border-radius: var(--border-radius-lg);
-    padding: var(--spacing-sm);
+    border-radius: 24px;
+    padding: 8px 8px 8px 16px;
+    border: 1px solid transparent;
+    transition: all var(--transition-fast);
+}
+
+.input-wrapper:focus-within {
+    background-color: white;
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-color);
 }
 
 .input-wrapper textarea {
@@ -971,10 +1206,11 @@ textarea.form-control {
     border: none;
     background: transparent;
     resize: none;
-    padding: var(--spacing-sm);
-    font-size: 0.9375rem;
-    max-height: 150px;
+    padding: 8px 0;
+    font-size: 1rem;
+    max-height: 200px;
     color: var(--text-primary);
+    line-height: 1.5;
 }
 
 .input-wrapper textarea:focus {
@@ -986,8 +1222,8 @@ textarea.form-control {
     height: 40px;
     border-radius: 50%;
     border: none;
-    background-color: var(--primary);
-    color: var(--text-on-primary);
+    background-color: transparent;
+    color: var(--primary);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -995,26 +1231,29 @@ textarea.form-control {
 }
 
 .send-btn:hover {
-    background-color: var(--primary-dark);
+    background-color: var(--secondary-light);
+    color: var(--primary-dark);
 }
 
 .send-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    background-color: transparent;
+    color: var(--text-tertiary);
 }
 
 .input-hint {
     font-size: 0.75rem;
     color: var(--text-tertiary);
-    text-align: right;
-    margin-top: var(--spacing-xs);
+    text-align: center;
+    margin-top: var(--spacing-sm);
 }
 
 /* ========== 详情页 ========== */
 .detail-grid {
     display: grid;
-    grid-template-columns: 1fr 1.5fr;
-    gap: var(--spacing-lg);
+    grid-template-columns: 1fr 2fr;
+    gap: var(--spacing-xl);
 }
 
 .back-link {
@@ -1022,53 +1261,62 @@ textarea.form-control {
     align-items: center;
     gap: var(--spacing-xs);
     color: var(--text-secondary);
-    margin-bottom: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
     font-size: 0.875rem;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: 18px;
+    transition: all var(--transition-fast);
 }
 
 .back-link:hover {
     color: var(--text-primary);
+    background-color: var(--bg-secondary);
 }
 
 .info-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: var(--spacing-md);
+    gap: var(--spacing-lg);
 }
 
 .info-item {
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
 }
 
 .info-item label {
     color: var(--text-secondary);
     display: block;
-    margin-bottom: var(--spacing-xs);
+    margin-bottom: 4px;
+    font-size: 0.8125rem;
 }
 
 .info-item span {
-    font-weight: 500;
+    font-weight: 400;
+    color: var(--text-primary);
 }
 
 .action-buttons {
     display: flex;
     gap: var(--spacing-sm);
-    margin-top: var(--spacing-lg);
+    margin-top: var(--spacing-xl);
 }
 
 .log-container {
-    max-height: 400px;
+    max-height: 500px;
     overflow-y: auto;
-    background-color: var(--bg-secondary);
-    border-radius: var(--border-radius);
+    background-color: #202124; /* Terminal black */
+    color: #e8eaed;
+    border-radius: 8px;
     padding: var(--spacing-md);
-    font-family: monospace;
+    font-family: 'Roboto Mono', monospace;
     font-size: 0.8125rem;
+    line-height: 1.6;
 }
 
 .log-entry {
-    padding: var(--spacing-xs) 0;
-    border-bottom: 1px solid var(--border-color);
+    padding: 2px 0;
+    border-bottom: 1px solid #3c4043;
 }
 
 .log-entry:last-child {
@@ -1076,51 +1324,56 @@ textarea.form-control {
 }
 
 .log-time {
-    color: var(--text-tertiary);
+    color: #9aa0a6;
     margin-right: var(--spacing-sm);
 }
 
 .log-level {
     padding: 1px 6px;
-    border-radius: 3px;
-    font-size: 0.75rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
     margin-right: var(--spacing-sm);
+    font-weight: bold;
 }
 
 .log-level.info {
-    background-color: #e3f2fd;
-    color: #1565c0;
+    background-color: #1a73e8;
+    color: white;
 }
 
 .log-level.warning {
-    background-color: #fff3e0;
-    color: #e65100;
+    background-color: #f9ab00;
+    color: black;
 }
 
 .log-level.error {
-    background-color: #ffebee;
-    color: #c62828;
+    background-color: #d93025;
+    color: white;
 }
 
 /* ========== 数据表格 ========== */
 .data-table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
 }
 
 .data-table th,
 .data-table td {
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: 12px 16px;
     text-align: left;
     border-bottom: 1px solid var(--border-color);
 }
 
 .data-table th {
-    font-weight: 600;
+    font-weight: 500;
     color: var(--text-secondary);
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    background-color: var(--bg-card);
+    position: sticky;
+    top: 0;
 }
 
 .data-table tr:hover {
@@ -1137,8 +1390,8 @@ textarea.form-control {
 /* ========== Toast 通知 ========== */
 .toast-container {
     position: fixed;
-    top: calc(var(--header-height) + var(--spacing-md));
-    right: var(--spacing-md);
+    bottom: var(--spacing-lg); /* Google toasts usually at bottom */
+    left: var(--spacing-lg);
     z-index: 9999;
     display: flex;
     flex-direction: column;
@@ -1146,71 +1399,59 @@ textarea.form-control {
 }
 
 .toast {
-    min-width: 300px;
+    min-width: 288px;
     max-width: 400px;
-    padding: var(--spacing-md);
-    background-color: var(--bg-card);
-    border-radius: var(--border-radius);
+    padding: 14px 24px;
+    background-color: #323232; /* Google Snackbar style */
+    color: white;
+    border-radius: 4px;
     box-shadow: var(--shadow-lg);
     display: flex;
-    align-items: flex-start;
-    gap: var(--spacing-sm);
-    animation: slideIn 0.3s ease;
-    border-left: 4px solid var(--primary);
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+    animation: slideUp 0.3s cubic-bezier(0.0, 0.0, 0.2, 1);
+    border: none;
 }
 
-@keyframes slideIn {
+@keyframes slideUp {
     from {
         opacity: 0;
-        transform: translateX(100%);
+        transform: translateY(20px);
     }
     to {
         opacity: 1;
-        transform: translateX(0);
+        transform: translateY(0);
     }
 }
 
 .toast.success {
-    border-left-color: var(--success);
-}
-
-.toast.error {
-    border-left-color: var(--error);
-}
-
-.toast.warning {
-    border-left-color: var(--warning);
-}
-
-.toast.info {
-    border-left-color: var(--info);
+    /* Keeping neutral dark background for standard toast feel, 
+       could add icon color if needed */
 }
 
 .toast-icon {
-    flex-shrink: 0;
+    display: none; /* Simplify toast */
 }
 
 .toast-content {
     flex: 1;
 }
 
-.toast-title {
-    font-weight: 600;
-    margin-bottom: var(--spacing-xs);
-}
-
 .toast-message {
     font-size: 0.875rem;
-    color: var(--text-secondary);
+    color: white;
 }
 
 .toast-close {
-    flex-shrink: 0;
     background: none;
     border: none;
-    color: var(--text-tertiary);
+    color: #a8c7fa; /* Action color */
     cursor: pointer;
     padding: 0;
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 0.875rem;
 }
 
 /* ========== 模态框 ========== */
@@ -1220,14 +1461,14 @@ textarea.form-control {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.6);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
     opacity: 0;
     visibility: hidden;
-    transition: all var(--transition-fast);
+    transition: opacity var(--transition-normal);
 }
 
 .modal-overlay.show {
@@ -1237,13 +1478,13 @@ textarea.form-control {
 
 .modal {
     width: 100%;
-    max-width: 500px;
+    max-width: 560px;
     max-height: 90vh;
     background-color: var(--bg-card);
-    border-radius: var(--border-radius-lg);
+    border-radius: 28px; /* Material 3 Dialog */
     box-shadow: var(--shadow-lg);
-    transform: scale(0.9);
-    transition: transform var(--transition-fast);
+    transform: scale(0.95);
+    transition: transform var(--transition-normal);
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -1257,13 +1498,14 @@ textarea.form-control {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--spacing-md) var(--spacing-lg);
-    border-bottom: 1px solid var(--border-color);
+    padding: 24px 24px 16px;
+    border-bottom: none;
 }
 
 .modal-title {
-    font-size: 1.125rem;
-    font-weight: 600;
+    font-size: 1.5rem;
+    font-weight: 400;
+    color: var(--text-primary);
 }
 
 .modal-close {
@@ -1271,8 +1513,8 @@ textarea.form-control {
     border: none;
     color: var(--text-secondary);
     cursor: pointer;
-    padding: var(--spacing-xs);
-    border-radius: var(--border-radius);
+    padding: 8px;
+    border-radius: 50%;
     transition: all var(--transition-fast);
 }
 
@@ -1282,17 +1524,18 @@ textarea.form-control {
 }
 
 .modal-body {
-    padding: var(--spacing-lg);
+    padding: 0 24px 24px;
     overflow-y: auto;
     flex: 1;
+    color: var(--text-secondary);
 }
 
 .modal-footer {
     display: flex;
     justify-content: flex-end;
     gap: var(--spacing-sm);
-    padding: var(--spacing-md) var(--spacing-lg);
-    border-top: 1px solid var(--border-color);
+    padding: 16px 24px 24px;
+    border-top: none;
 }
 
 /* ========== 空状态 ========== */
@@ -1338,28 +1581,46 @@ textarea.form-control {
     }
 }
 
-/* ========== 隐藏头部 ========== */
-.hide-header .app-header {
+/* ========== 隐藏头部 (登录/注册页) ========== */
+.hide-header .app-header,
+.hide-header .app-sidebar {
     display: none;
 }
 
 .hide-header .main-content {
     padding: 0;
     max-width: none;
+    background-color: var(--bg-secondary); /* Ensure background is consistent */
 }
 
 /* ========== 响应式 ========== */
 @media (max-width: 768px) {
-    .header-nav {
-        display: none;
+    .app-sidebar {
+        position: absolute;
+        height: 100%;
+        box-shadow: var(--shadow-lg);
+        transform: translateX(-100%);
     }
+
+    .app-sidebar.collapsed {
+        transform: translateX(0); /* Reuse collapsed class or add a new one for mobile toggle? */
+        /* Actually, let's keep it simple: Mobile hides sidebar by default */
+        width: 256px;
+    }
+    
+    /* When sidebar is "active" on mobile, we need a way to show it. 
+       For now, let's just let the toggle button work as is. 
+       If it toggles 'collapsed', that changes width. 
+       On mobile we might want it to slide in. 
+       Let's leave advanced mobile nav for now and focus on desktop layout.
+    */
     
     .main-content {
         padding: var(--spacing-md);
     }
     
     .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: 1fr; /* Stack on mobile */
     }
     
     .resources-grid, .tasks-grid {

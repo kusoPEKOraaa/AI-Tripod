@@ -5,40 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI-Tripod - 模型管理平台</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
 </head>
 <body>
-    <div id="app">
+    <div id="app" class="app-layout">
+        <!-- Top App Bar -->
         <header class="app-header">
             <div class="header-left">
+                <button class="icon-btn sidebar-toggle" id="sidebar-toggle" title="收起/展开菜单">
+                    <span class="material-icons">menu</span>
+                </button>
                 <a href="#/dashboard" class="logo">
                     <span class="logo-icon material-icons">rocket_launch</span>
                     <span class="logo-text">AI-Tripod</span>
                 </a>
-                <nav class="header-nav">
-                    <a href="#/dashboard" class="nav-link">
-                        <span class="material-icons">dashboard</span>
-                        <span>仪表盘</span>
-                    </a>
-                    <a href="#/resources" class="nav-link">
-                        <span class="material-icons">folder</span>
-                        <span>资源</span>
-                    </a>
-                    <a href="#/training" class="nav-link">
-                        <span class="material-icons">model_training</span>
-                        <span>训练</span>
-                    </a>
-                    <a href="#/inference" class="nav-link">
-                        <span class="material-icons">psychology</span>
-                        <span>推理</span>
-                    </a>
-                    <a href="#/evaluation" class="nav-link">
-                        <span class="material-icons">analytics</span>
-                        <span>评估</span>
-                    </a>
-                </nav>
             </div>
+            
+            <div class="header-center">
+                <!-- Optional: Search bar could go here -->
+            </div>
+
             <div class="header-right">
                 <button class="icon-btn" id="theme-toggle" title="切换主题">
                     <span class="material-icons">dark_mode</span>
@@ -67,11 +55,48 @@
                 </div>
             </div>
         </header>
-        <main class="main-content" id="main-content">
-            <div class="loading">加载中...</div>
-        </main>
+
+        <div class="app-body">
+            <!-- Left Sidebar Navigation -->
+            <aside class="app-sidebar" id="app-sidebar">
+                <nav class="sidebar-nav">
+                    <a href="#/dashboard" class="nav-link">
+                        <span class="material-icons">dashboard</span>
+                        <span>仪表盘</span>
+                    </a>
+                    <div class="nav-divider"></div>
+                    <a href="#/resources" class="nav-link">
+                        <span class="material-icons">folder</span>
+                        <span>资源管理</span>
+                    </a>
+                    <a href="#/training" class="nav-link">
+                        <span class="material-icons">model_training</span>
+                        <span>模型训练</span>
+                    </a>
+                    <a href="#/inference" class="nav-link">
+                        <span class="material-icons">psychology</span>
+                        <span>推理服务</span>
+                    </a>
+                    <a href="#/evaluation" class="nav-link">
+                        <span class="material-icons">analytics</span>
+                        <span>模型评估</span>
+                    </a>
+                </nav>
+                
+                <div class="sidebar-footer">
+                    <p class="version-text">v1.0.0</p>
+                </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main class="main-content" id="main-content">
+                <div class="loading">加载中...</div>
+            </main>
+        </div>
     </div>
+
     <div id="toast-container" class="toast-container"></div>
+    
     <div id="modal-overlay" class="modal-overlay">
         <div class="modal">
             <div class="modal-header">
@@ -84,20 +109,24 @@
             <div class="modal-footer"></div>
         </div>
     </div>
-    <script src="/static/js/api.js?v=3"></script>
-    <script src="/static/js/utils.js?v=3"></script>
-    <script src="/static/js/router.js?v=3"></script>
-    <script src="/static/js/components.js?v=3"></script>
-    <script src="/static/js/pages.js?v=3"></script>
-    <script src="/static/js/app.js?v=3"></script>
+
+    <script src="/static/js/api.js?v=4"></script>
+    <script src="/static/js/utils.js?v=4"></script>
+    <script src="/static/js/router.js?v=4"></script>
+    <script src="/static/js/components.js?v=4"></script>
+    <script src="/static/js/pages.js?v=4"></script>
+    <script src="/static/js/app.js?v=4"></script>
     <script>
+        // Inline Theme Logic
         const themeToggle = document.getElementById('theme-toggle');
         const themeIcon = themeToggle.querySelector('.material-icons');
         const savedTheme = localStorage.getItem('theme');
+        
         if (savedTheme === 'dark') {
             document.documentElement.setAttribute('data-theme', 'dark');
             themeIcon.textContent = 'light_mode';
         }
+        
         themeToggle.addEventListener('click', () => {
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
             if (isDark) {
@@ -109,6 +138,14 @@
                 themeIcon.textContent = 'light_mode';
                 localStorage.setItem('theme', 'dark');
             }
+        });
+
+        // Sidebar Toggle Logic
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const appSidebar = document.getElementById('app-sidebar');
+        
+        sidebarToggle.addEventListener('click', () => {
+            appSidebar.classList.toggle('collapsed');
         });
     </script>
 </body>

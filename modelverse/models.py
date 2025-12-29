@@ -7,6 +7,8 @@ class UserBase(BaseModel):
     username: str
     email: Optional[str] = None
     is_admin: bool = False
+    allowed_gpu_ids: Optional[List[int]] = None
+    allowed_task_types: Optional[List[str]] = None
 
 class UserCreate(UserBase):
     password: str
@@ -18,6 +20,10 @@ class User(UserBase):
     
     class Config:
         from_attributes = True
+
+class UserPermissionsUpdate(BaseModel):
+    allowed_gpu_ids: Optional[List[int]] = None
+    allowed_task_types: Optional[List[str]] = None
 
 class UserInDB(User):
     hashed_password: str
@@ -154,6 +160,7 @@ class TrainingTaskCreate(BaseModel):
     dataset_id: Optional[int] = None
     # 前端可能传入字符串形式的JSON，这里允许str并在后端转换
     config_params: Union[Dict[str, Any], str] = Field(default_factory=dict)
+    gpu_ids: Optional[List[int]] = None
 
 class TrainingTask(BaseModel):
     id: int

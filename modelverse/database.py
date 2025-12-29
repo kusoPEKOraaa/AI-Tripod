@@ -20,7 +20,7 @@ from models import (
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # 数据库文件名
-DB_NAME = "modelverse.db"
+DB_NAME = os.path.join(os.path.dirname(os.path.abspath(__file__)), "modelverse.db")
 
 def get_db_connection():
     """获取数据库连接"""
@@ -47,6 +47,20 @@ def init_db():
     )
     ''')
     
+    # 用户表新增列
+    for col_def in [
+        ("allowed_gpu_ids", "TEXT"),
+        ("allowed_task_types", "TEXT")
+    ]:
+        col_name, col_type = col_def
+        try:
+            cursor.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}")
+        except sqlite3.OperationalError as e:
+            # 如果错误不是关于列已存在，则打印错误
+            if "duplicate column name" not in str(e):
+                print(f"Error adding column {col_name}: {e}")
+            pass
+
     # 创建资源表
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS resources (
@@ -219,6 +233,23 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 # 用户管理函数
+
+def process_user_row(row: Any) -> Dict[str, Any]:
+    """处理用户数据行，解析JSON字段"""
+    user_dict = dict(row)
+    if user_dict.get('allowed_gpu_ids'):
+        try:
+            user_dict['allowed_gpu_ids'] = json.loads(user_dict['allowed_gpu_ids'])
+        except:
+            user_dict['allowed_gpu_ids'] = None
+    
+    if user_dict.get('allowed_task_types'):
+        try:
+            user_dict['allowed_task_types'] = json.loads(user_dict['allowed_task_types'])
+        except:
+            user_dict['allowed_task_types'] = None
+    return user_dict
+
 def create_user(user: UserCreate) -> User:
     """创建用户"""
     if check_username_exists(user.username):
@@ -229,16 +260,21 @@ def create_user(user: UserCreate) -> User:
     
     hashed_password = get_password_hash(user.password)
     
+    allowed_gpu_ids_json = json.dumps(user.allowed_gpu_ids) if user.allowed_gpu_ids is not None else None
+    allowed_task_types_json = json.dumps(user.allowed_task_types) if user.allowed_task_types is not None else None
+
     cursor.execute('''
-    INSERT INTO users (username, email, hashed_password, display_name, phone, is_admin)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO users (username, email, hashed_password, display_name, phone, is_admin, allowed_gpu_ids, allowed_task_types)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         user.username,
         user.email,
         hashed_password,
         "",  # display_name
         "",  # phone
-        user.is_admin
+        user.is_admin,
+        allowed_gpu_ids_json,
+        allowed_task_types_json
     ))
     
     user_id = cursor.lastrowid
@@ -249,7 +285,7 @@ def create_user(user: UserCreate) -> User:
     user_data = cursor.fetchone()
     conn.close()
     
-    return User(**dict(user_data))
+    return User(**process_user_row(user_data))
 
 def get_user_by_username(username: str) -> Optional[UserInDB]:
     """通过用户名获取用户"""
@@ -261,7 +297,7 @@ def get_user_by_username(username: str) -> Optional[UserInDB]:
     conn.close()
     
     if user_data:
-        return UserInDB(**dict(user_data))
+        return UserInDB(**process_user_row(user_data))
     return None
 
 def get_user_by_id(user_id: int) -> Optional[UserInDB]:
@@ -274,7 +310,7 @@ def get_user_by_id(user_id: int) -> Optional[UserInDB]:
     conn.close()
     
     if user_data:
-        return UserInDB(**dict(user_data))
+        return UserInDB(**process_user_row(user_data))
     return None
 
 def check_username_exists(username: str) -> bool:
@@ -297,7 +333,36 @@ def get_users() -> List[User]:
     users_data = cursor.fetchall()
     conn.close()
     
-    return [User(**dict(user)) for user in users_data]
+    return [User(**process_user_row(user)) for user in users_data]
+
+def update_user_permissions(user_id: int, permissions: Any) -> Optional[User]:
+    """更新用户权限配置"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 检查用户是否存在
+    cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+    if not cursor.fetchone():
+        conn.close()
+        return None
+    
+    allowed_gpu_ids_json = json.dumps(permissions.allowed_gpu_ids) if permissions.allowed_gpu_ids is not None else None
+    allowed_task_types_json = json.dumps(permissions.allowed_task_types) if permissions.allowed_task_types is not None else None
+    
+    cursor.execute('''
+    UPDATE users 
+    SET allowed_gpu_ids = ?, allowed_task_types = ?
+    WHERE id = ?
+    ''', (allowed_gpu_ids_json, allowed_task_types_json, user_id))
+    
+    conn.commit()
+    
+    # 获取更新后的用户
+    cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+    user_data = cursor.fetchone()
+    conn.close()
+    
+    return User(**process_user_row(user_data))
 
 def update_user_profile(user_id: int, profile_data: ProfileUpdate) -> User:
     """更新用户资料"""
@@ -548,6 +613,13 @@ def create_training_task(task_data: TrainingTaskCreate, user_id: int) -> Trainin
             config_params = json.loads(config_params)
         except Exception:
             config_params = {}
+    
+    # 如果指定了GPU ID，将其注入到配置参数中
+    if task_data.gpu_ids:
+        if "training" not in config_params:
+            config_params["training"] = {}
+        config_params["training"]["cuda_visible_devices"] = ",".join(map(str, task_data.gpu_ids))
+
     config_params_json = json.dumps(config_params) if config_params else None
 
     cursor.execute('''

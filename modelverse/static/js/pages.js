@@ -4,9 +4,20 @@
  */
 
 const Pages = {
+    // 停止所有轮询
+    stopAllPolling() {
+        if (this.resources && this.resources.stopPolling) {
+            this.resources.stopPolling();
+        }
+        if (this.dashboard && this.dashboard.stopGpuPolling) {
+            this.dashboard.stopGpuPolling();
+        }
+    },
+
     // =========== 认证页面 ===========
     auth: {
         captchaId: null,
+        particles: null,
         
         // 登录页面
         async renderLogin() {
@@ -14,6 +25,7 @@ const Pages = {
             
             const content = `
                 <div class="auth-page">
+                    <canvas id="bg-canvas"></canvas>
                     <div class="auth-card">
                         <div class="auth-header">
                             <span class="auth-icon material-icons">rocket_launch</span>
@@ -47,6 +59,7 @@ const Pages = {
             
             document.getElementById('main-content').innerHTML = content;
             this.refreshCaptcha();
+            this.initParticles();
             
             // 绑定表单提交
             document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -61,6 +74,7 @@ const Pages = {
             
             const content = `
                 <div class="auth-page">
+                    <canvas id="bg-canvas"></canvas>
                     <div class="auth-card">
                         <div class="auth-header">
                             <span class="auth-icon material-icons">rocket_launch</span>
@@ -102,12 +116,95 @@ const Pages = {
             
             document.getElementById('main-content').innerHTML = content;
             this.refreshCaptcha();
+            this.initParticles();
             
             // 绑定表单提交
             document.getElementById('register-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 await this.handleRegister(e.target);
             });
+        },
+
+        // 初始化粒子背景
+        initParticles() {
+            const canvas = document.getElementById('bg-canvas');
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            let width, height;
+            let particles = [];
+
+            // 调整尺寸
+            const resize = () => {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            };
+            window.addEventListener('resize', resize);
+            resize();
+
+            // 粒子类
+            class Particle {
+                constructor() {
+                    this.x = Math.random() * width;
+                    this.y = Math.random() * height;
+                    this.vx = (Math.random() - 0.5) * 0.5;
+                    this.vy = (Math.random() - 0.5) * 0.5;
+                    this.size = Math.random() * 2 + 1;
+                }
+
+                update() {
+                    this.x += this.vx;
+                    this.y += this.vy;
+
+                    if (this.x < 0 || this.x > width) this.vx *= -1;
+                    if (this.y < 0 || this.y > height) this.vy *= -1;
+                }
+
+                draw() {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(11, 87, 208, 0.2)'; // Primary color with opacity
+                    ctx.fill();
+                }
+            }
+
+            // 初始化粒子
+            for (let i = 0; i < 50; i++) {
+                particles.push(new Particle());
+            }
+
+            // 动画循环
+            const animate = () => {
+                if (!document.getElementById('bg-canvas')) return; // 页面切换后停止
+                
+                ctx.clearRect(0, 0, width, height);
+                
+                // 绘制连接线
+                ctx.strokeStyle = 'rgba(11, 87, 208, 0.05)';
+                ctx.lineWidth = 1;
+                
+                for (let i = 0; i < particles.length; i++) {
+                    particles[i].update();
+                    particles[i].draw();
+                    
+                    for (let j = i + 1; j < particles.length; j++) {
+                        const dx = particles[i].x - particles[j].x;
+                        const dy = particles[i].y - particles[j].y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < 150) {
+                            ctx.beginPath();
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(particles[j].x, particles[j].y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+                
+                requestAnimationFrame(animate);
+            };
+            
+            animate();
         },
         
         // 刷新验证码
@@ -184,11 +281,29 @@ const Pages = {
     
     // =========== 仪表盘页面 ===========
     dashboard: {
+        gpuTimer: null,
+
         async render() {
             document.body.classList.remove('hide-header');
             
+            // 停止所有页面的自动刷新
+            Pages.stopAllPolling();
+            
+            // 获取当前时间段
+            const hour = new Date().getHours();
+            let greeting = '你好';
+            if (hour < 6) greeting = '夜深了';
+            else if (hour < 9) greeting = '早上好';
+            else if (hour < 12) greeting = '上午好';
+            else if (hour < 14) greeting = '中午好';
+            else if (hour < 18) greeting = '下午好';
+            else greeting = '晚上好';
+
             const content = `
-                ${Components.pageHeader('仪表盘', '欢迎使用 AI-Tripod 模型管理平台')}
+                <div class="page-header" style="margin-bottom: var(--spacing-xl);">
+                    <h1>${greeting}，欢迎使用 AI-Tripod</h1>
+                    <p class="subtitle">一站式大模型训练与推理平台，助力您的 AI 创新</p>
+                </div>
                 
                 <div class="stats-grid" id="stats-container">
                     ${Components.loading('加载统计数据...')}
@@ -242,6 +357,7 @@ const Pages = {
             // 加载数据
             this.loadStats();
             this.refreshGpu();
+            this.startGpuPolling();
         },
         
         async loadStats() {
@@ -267,7 +383,7 @@ const Pages = {
             }
         },
         
-        async refreshGpu() {
+        async refreshGpu(silent = false) {
             try {
                 const gpuData = await API.inference.getGpuStatus();
                 
@@ -278,7 +394,24 @@ const Pages = {
                     document.getElementById('gpu-container').innerHTML = Components.emptyState('memory', '未检测到 GPU');
                 }
             } catch (error) {
-                document.getElementById('gpu-container').innerHTML = Components.emptyState('error', 'GPU 状态获取失败');
+                if (!silent) {
+                    document.getElementById('gpu-container').innerHTML = Components.emptyState('error', 'GPU 状态获取失败');
+                }
+            }
+        },
+
+        startGpuPolling() {
+            this.stopGpuPolling();
+            // 每3秒刷新一次 GPU 状态
+            this.gpuTimer = setInterval(() => {
+                this.refreshGpu(true);
+            }, 3000);
+        },
+
+        stopGpuPolling() {
+            if (this.gpuTimer) {
+                clearInterval(this.gpuTimer);
+                this.gpuTimer = null;
             }
         }
     },
@@ -291,8 +424,7 @@ const Pages = {
         async render() {
             document.body.classList.remove('hide-header');
             
-            // 清除之前的轮询
-            this.stopPolling();
+            Pages.stopAllPolling();
             
             const toolbar = Components.toolbar(
                 `<div class="filter-group">
@@ -354,7 +486,14 @@ const Pages = {
                         '<button class="btn btn-primary" style="margin-top:var(--spacing-md)" onclick="Pages.resources.showCreateModal()">添加资源</button>'
                     );
                 } else {
-                    document.getElementById('resources-container').innerHTML = resources.map(r => Components.resourceCard(r)).join('');
+                    document.getElementById('resources-container').innerHTML = resources.map((r, index) => {
+                        const style = `animation-delay: ${index * 0.05}s`;
+                        // Inject style into the card div. Since resourceCard returns a string, we can replace the first tag.
+                        // Or better, wrap it. But let's try a regex replace for simplicity or modify component.
+                        // Modifying component is cleaner, but let's try injecting class and style here first.
+                        let cardHtml = Components.resourceCard(r);
+                        return cardHtml.replace('class="resource-card"', `class="resource-card stagger-animate" style="${style}"`);
+                    }).join('');
                 }
             } catch (error) {
                 if (!silent) {
@@ -470,6 +609,7 @@ const Pages = {
     training: {
         async render() {
             document.body.classList.remove('hide-header');
+            Pages.stopAllPolling();
             
             const toolbar = Components.toolbar(
                 '',
@@ -501,7 +641,11 @@ const Pages = {
                         '<button class="btn btn-primary" style="margin-top:var(--spacing-md)" onclick="Pages.training.showCreateModal()">创建任务</button>'
                     );
                 } else {
-                    document.getElementById('training-container').innerHTML = tasks.map(t => Components.trainingCard(t)).join('');
+                    document.getElementById('training-container').innerHTML = tasks.map((t, index) => {
+                        const style = `animation-delay: ${index * 0.05}s`;
+                        let cardHtml = Components.trainingCard(t);
+                        return cardHtml.replace('class="task-card"', `class="task-card stagger-animate" style="${style}"`);
+                    }).join('');
                 }
             } catch (error) {
                 Utils.toast.error('加载任务失败: ' + error.message);
@@ -695,6 +839,7 @@ const Pages = {
     inference: {
         async render() {
             document.body.classList.remove('hide-header');
+            Pages.stopAllPolling();
             
             const toolbar = Components.toolbar(
                 '',
@@ -726,7 +871,11 @@ const Pages = {
                         '<button class="btn btn-primary" style="margin-top:var(--spacing-md)" onclick="Pages.inference.showCreateModal()">创建服务</button>'
                     );
                 } else {
-                    document.getElementById('inference-container').innerHTML = tasks.map(t => Components.inferenceCard(t)).join('');
+                    document.getElementById('inference-container').innerHTML = tasks.map((t, index) => {
+                        const style = `animation-delay: ${index * 0.05}s`;
+                        let cardHtml = Components.inferenceCard(t);
+                        return cardHtml.replace('class="task-card"', `class="task-card stagger-animate" style="${style}"`);
+                    }).join('');
                 }
             } catch (error) {
                 Utils.toast.error('加载服务失败: ' + error.message);
@@ -955,6 +1104,7 @@ const Pages = {
     evaluation: {
         async render() {
             document.body.classList.remove('hide-header');
+            Pages.stopAllPolling();
             
             const toolbar = Components.toolbar(
                 '',
@@ -986,7 +1136,11 @@ const Pages = {
                         '<button class="btn btn-primary" style="margin-top:var(--spacing-md)" onclick="Pages.evaluation.showCreateModal()">创建任务</button>'
                     );
                 } else {
-                    document.getElementById('evaluation-container').innerHTML = tasks.map(t => Components.evaluationCard(t)).join('');
+                    document.getElementById('evaluation-container').innerHTML = tasks.map((t, index) => {
+                        const style = `animation-delay: ${index * 0.05}s`;
+                        let cardHtml = Components.evaluationCard(t);
+                        return cardHtml.replace('class="task-card"', `class="task-card stagger-animate" style="${style}"`);
+                    }).join('');
                 }
             } catch (error) {
                 Utils.toast.error('加载任务失败: ' + error.message);
@@ -1353,6 +1507,153 @@ const Pages = {
             });
         },
         
+        async showPermissionsModal(userId, username) {
+            // 1. 获取用户信息
+            let user = null;
+            try {
+                const users = await API.users.list();
+                user = users.find(u => u.id === userId);
+            } catch (error) {
+                Utils.toast.error('获取用户信息失败');
+                return;
+            }
+
+            if (!user) {
+                Utils.toast.error('用户不存在');
+                return;
+            }
+
+            // 2. 获取可用 GPU 列表
+            let gpuList = [];
+            try {
+                const gpuData = await API.inference.getGpuStatus();
+                if (gpuData && gpuData.gpus) {
+                    gpuList = gpuData.gpus;
+                }
+            } catch (error) {
+                console.error('Failed to get GPU status:', error);
+                // 即使获取失败，也不应该阻止打开模态框，只是没有选项而已
+            }
+
+            // 3. 定义任务类型
+            const taskTypes = [
+                { value: 'SFT', label: 'SFT (微调)' },
+                { value: 'DPO', label: 'DPO (偏好优化)' },
+                { value: 'PRETRAIN', label: 'Pre-train (预训练)' },
+                { value: 'LONGCTX', label: 'Long Context (长上下文)' }
+            ];
+
+            // 4. 解析当前权限
+            const currentGpus = user.allowed_gpu_ids || [];
+            const currentTasks = user.allowed_task_types || [];
+
+            // 5. 构建 GPU 复选框 HTML
+            let gpuCheckboxesHtml = '';
+            if (gpuList.length > 0) {
+                gpuList.forEach(gpu => {
+                    const isChecked = currentGpus.includes(gpu.id);
+                    gpuCheckboxesHtml += `
+                        <div class="checkbox-item">
+                            <label>
+                                <input type="checkbox" name="gpu_ids" value="${gpu.id}" ${isChecked ? 'checked' : ''}>
+                                GPU ${gpu.id}: ${gpu.name} (${Utils.format.fileSize(gpu.memory_total * 1024 * 1024 * 1024)})
+                            </label>
+                        </div>
+                    `;
+                });
+            } else {
+                gpuCheckboxesHtml = '<p class="text-secondary">未检测到可用 GPU，或无法获取 GPU 信息。</p>';
+            }
+
+            // 6. 构建任务类型复选框 HTML
+            let taskCheckboxesHtml = '';
+            taskTypes.forEach(task => {
+                const isChecked = currentTasks.includes(task.value);
+                taskCheckboxesHtml += `
+                    <div class="checkbox-item">
+                        <label>
+                            <input type="checkbox" name="task_types" value="${task.value}" ${isChecked ? 'checked' : ''}>
+                            ${task.label}
+                        </label>
+                    </div>
+                `;
+            });
+
+            // 7. 显示模态框
+            Utils.modal.form({
+                title: `设置权限 - ${username}`,
+                fields: [
+                    {
+                        type: 'html',
+                        html: `
+                            <div class="form-group">
+                                <label>允许使用的显卡</label>
+                                <div class="checkbox-group" id="gpu-checkbox-group">
+                                    ${gpuCheckboxesHtml}
+                                </div>
+                                <small class="form-text text-muted">如果不选，默认允许使用所有显卡。</small>
+                            </div>
+                            <div class="form-group" style="margin-top: 1rem;">
+                                <label>允许的任务类型</label>
+                                <div class="checkbox-group" id="task-checkbox-group">
+                                    ${taskCheckboxesHtml}
+                                </div>
+                                <small class="form-text text-muted">如果不选，默认允许使用所有任务类型。</small>
+                            </div>
+                            <style>
+                                .checkbox-group {
+                                    display: flex;
+                                    flex-direction: column;
+                                    gap: 0.5rem;
+                                    padding: 0.5rem;
+                                    border: 1px solid var(--border-color);
+                                    border-radius: 4px;
+                                    max-height: 200px;
+                                    overflow-y: auto;
+                                }
+                                .checkbox-item label {
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 0.5rem;
+                                    cursor: pointer;
+                                    margin-bottom: 0;
+                                }
+                                .checkbox-item input[type="checkbox"] {
+                                    width: auto;
+                                    margin: 0;
+                                }
+                            </style>
+                        `
+                    }
+                ],
+                onSubmit: async (data) => {
+                    // 由于 Utils.modal.form 默认只处理 input/select/textarea 的 value
+                    // 对于 checkbox 组，我们需要手动获取
+                    
+                    const modalBody = document.querySelector('.modal-body');
+                    if (!modalBody) return;
+
+                    // 获取选中的 GPU
+                    const selectedGpus = Array.from(modalBody.querySelectorAll('input[name="gpu_ids"]:checked'))
+                        .map(cb => parseInt(cb.value));
+                    
+                    // 获取选中的任务类型
+                    const selectedTasks = Array.from(modalBody.querySelectorAll('input[name="task_types"]:checked'))
+                        .map(cb => cb.value);
+
+                    const permissions = {
+                        allowed_gpu_ids: selectedGpus.length > 0 ? selectedGpus : null,
+                        allowed_task_types: selectedTasks.length > 0 ? selectedTasks : null
+                    };
+
+                    await API.users.setPermissions(userId, permissions);
+                    Utils.toast.success('权限设置已更新');
+                    this.loadUsers();
+                },
+                submitText: '保存设置'
+            });
+        },
+
         async deleteUser(id) {
             Utils.modal.confirm('确定要删除这个用户吗？', async () => {
                 try {
