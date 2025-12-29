@@ -1,0 +1,19 @@
+{
+  "model_path": "trainedmodels/SFT",
+  "task_id": 4,
+  "task_name": "MMLU",
+  "benchmark_type": "mmlu",
+  "output_dir": "/data/zhaoshuyu/AI-Tripod/modelverse/evaluation_results/task_4_1766866447",
+  "parameters": {
+    "max_new_tokens": 128,
+    "temperature": 0.01,
+    "use_default_model_params": true,
+    "generation_params": {
+      "temperature": 0.01,
+      "top_p": 0.95,
+      "do_sample": false,
+      "num_return_sequences": 1,
+      "repetition_penalty": 1.2
+    }
+  }
+}

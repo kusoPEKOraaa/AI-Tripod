@@ -27,8 +27,6 @@ modelverse/uploads/
 modelverse/models/
 modelverse/datasets/
 modelverse/trainedmodels/
-modelverse/training_configs/
-modelverse/evaluation_configs/
 modelverse/evaluation_results/
 
 # HuggingFace / datasets caches
