@@ -37,8 +37,8 @@ os.environ.setdefault('NUMEXPR_MAX_THREADS', '32')
 os.environ.setdefault('OMP_NUM_THREADS', '32')
 os.environ.setdefault('MKL_NUM_THREADS', '32')
 
-from models import User, UserCreate, Token, UserRegister, ProfileUpdate, PasswordChange, ResourceType, DownloadStatus, ResourceCreate, Resource, MirrorSource, DownloadRequest, TrainingTask, TrainingTaskCreate, TrainingStatus, InferenceTask, InferenceTaskCreate, InferenceTaskUpdate, InferenceStatus, Message, ChatRequest, ChatResponse, EvaluationTask, EvaluationTaskCreate, EvaluationStatus, EvaluationMetrics
-from database import authenticate_user, create_user, get_users, init_db, check_username_exists, update_user_profile, update_user_password, create_resource, get_all_resources, get_user_resources, get_resource, update_resource_status, delete_resource, create_training_task, get_all_training_tasks, get_user_training_tasks, get_training_task, update_training_task, get_training_logs, create_inference_task, get_all_inference_tasks, get_user_inference_tasks, get_inference_task, update_inference_task, delete_inference_task, create_evaluation_task, get_all_evaluation_tasks, get_user_evaluation_tasks, get_evaluation_task, update_evaluation_task, delete_evaluation_task, get_evaluation_logs, add_evaluation_log, start_evaluation_task, stop_evaluation_task, delete_user_by_id
+from models import User, UserCreate, Token, UserRegister, ProfileUpdate, PasswordChange, ResourceType, DownloadStatus, ResourceCreate, Resource, MirrorSource, DownloadRequest, TrainingTask, TrainingTaskCreate, TrainingStatus, InferenceTask, InferenceTaskCreate, InferenceTaskUpdate, InferenceStatus, Message, ChatRequest, ChatResponse, EvaluationTask, EvaluationTaskCreate, EvaluationStatus, EvaluationMetrics, UserPermissionsUpdate
+from database import authenticate_user, create_user, get_users, init_db, check_username_exists, update_user_profile, update_user_password, create_resource, get_all_resources, get_user_resources, get_resource, update_resource_status, delete_resource, create_training_task, get_all_training_tasks, get_user_training_tasks, get_training_task, update_training_task, get_training_logs, create_inference_task, get_all_inference_tasks, get_user_inference_tasks, get_inference_task, update_inference_task, delete_inference_task, create_evaluation_task, get_all_evaluation_tasks, get_user_evaluation_tasks, get_evaluation_task, update_evaluation_task, delete_evaluation_task, get_evaluation_logs, add_evaluation_log, start_evaluation_task, stop_evaluation_task, delete_user_by_id, update_user_permissions
 from auth import create_access_token, get_current_user, get_current_admin, ACCESS_TOKEN_EXPIRE_MINUTES
 import huggingface_utils as hf_utils
 import training_utils
@@ -285,6 +285,22 @@ async def admin_change_user_password(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"修改密码失败: {str(e)}"
         )
+
+@app.api_route(
+    "/api/users/{user_id}/permissions",
+    methods=["PUT", "POST"],
+    response_model=User,
+)
+async def admin_update_user_permissions(
+    user_id: int,
+    permissions: UserPermissionsUpdate,
+    current_user: User = Depends(get_current_admin)
+):
+    """管理员配置普通用户可用GPU编号与可启动任务类型"""
+    updated = update_user_permissions(user_id=user_id, permissions=permissions)
+    if not updated:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    return updated
 
 @app.get("/api/captcha")
 async def get_captcha():
@@ -775,6 +791,48 @@ async def create_training_task(
 ):
     """创建新的训练任务"""
     try:
+        # ========== 普通用户资源调度权限校验 ==========
+        if not current_user.is_admin:
+            # 1) 任务类型限制：基于 config_params.training_type（默认 SFT）
+            requested_training_type = "SFT"
+            try:
+                cfg = task.config_params
+                if isinstance(cfg, str):
+                    cfg = json.loads(cfg) if cfg else {}
+                if isinstance(cfg, dict):
+                    requested_training_type = (cfg.get("training_type") or "SFT")
+            except Exception:
+                requested_training_type = "SFT"
+
+            allowed_task_types = getattr(current_user, "allowed_task_types", None)
+            if allowed_task_types is not None:
+                # 允许列表为空则直接拒绝
+                if not allowed_task_types:
+                    raise HTTPException(status_code=403, detail="当前用户未被授权启动任何训练任务类型")
+                if requested_training_type not in allowed_task_types:
+                    raise HTTPException(
+                        status_code=403,
+                        detail=f"当前用户无权启动任务类型: {requested_training_type}"
+                    )
+
+            # 2) GPU 资源限制：task.gpu_ids 必须是 allowed_gpu_ids 的子集
+            allowed_gpu_ids = getattr(current_user, "allowed_gpu_ids", None)
+            requested_gpu_ids = getattr(task, "gpu_ids", None)
+
+            if allowed_gpu_ids is not None:
+                if not allowed_gpu_ids:
+                    raise HTTPException(status_code=403, detail="当前用户未被授权使用任何GPU")
+
+                if requested_gpu_ids:
+                    if any(gid not in allowed_gpu_ids for gid in requested_gpu_ids):
+                        raise HTTPException(
+                            status_code=403,
+                            detail=f"选择的GPU超出授权范围，可用GPU: {allowed_gpu_ids}"
+                        )
+                else:
+                    # 未显式选择时，默认使用管理员授权的GPU列表，避免后续自动挑选到未授权GPU
+                    task.gpu_ids = allowed_gpu_ids
+
         # 确保模型存在且已下载
         model = get_resource(resource_id=task.base_model_id)
         if not model or model.resource_type != ResourceType.MODEL or model.status != DownloadStatus.COMPLETED:

@@ -417,6 +417,11 @@ const API = {
         // 删除用户
         delete(id) {
             return API.delete(`/users/${id}`);
+        },
+
+        // 更新用户资源调度权限（管理员）
+        updatePermissions(id, data) {
+            return API.put(`/users/${id}/permissions`, data);
         }
     },
     

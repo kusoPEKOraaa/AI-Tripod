@@ -784,10 +784,13 @@ const Pages = {
             // 先获取可用模型
             let models = [];
             let datasets = [];
+            let me = null;
             try {
                 const resources = await API.resources.list();
                 models = resources.filter(r => (r.resource_type || r.type) === 'MODEL' && r.status === 'COMPLETED');
                 datasets = resources.filter(r => (r.resource_type || r.type) === 'DATASET' && r.status === 'COMPLETED');
+                // 获取当前用户，用于提示可用GPU范围
+                me = await API.auth.getCurrentUser();
             } catch (error) {
                 Utils.toast.error('获取资源列表失败');
                 return;
@@ -803,6 +806,20 @@ const Pages = {
                 size: 'large',
                 fields: [
                     { name: 'name', label: '任务名称', required: true, placeholder: '例如: SFT 训练' },
+                    {
+                        name: 'training_type',
+                        label: '任务类型',
+                        type: 'select',
+                        options: [
+                            { value: 'SFT', label: 'SFT（微调）' },
+                            { value: 'DPO', label: 'DPO' },
+                            { value: 'PRETRAIN', label: 'PRETRAIN（预训练）' },
+                            { value: 'LONGCTX', label: 'LONGCTX（长上下文）' },
+                            { value: 'DDP', label: 'DDP' },
+                            { value: 'FSDP', label: 'FSDP' }
+                        ],
+                        value: 'SFT'
+                    },
                     { 
                         name: 'model_id', 
                         label: '基础模型', 
@@ -817,16 +834,37 @@ const Pages = {
                         required: false,
                         options: [{ value: '', label: '无' }, ...datasets.map(d => ({ value: d.id, label: d.name }))]
                     },
+                    {
+                        name: 'gpu_ids',
+                        label: '使用GPU编号',
+                        placeholder: (() => {
+                            const allowed = me && Array.isArray(me.allowed_gpu_ids) ? me.allowed_gpu_ids.join(',') : '';
+                            return allowed ? `例如: ${allowed}（留空则默认使用授权GPU）` : '例如: 0,1（留空表示不限制/自动选择）';
+                        })()
+                    },
                     { name: 'epochs', label: '训练轮数', type: 'number', value: '3', placeholder: '默认 3' },
                     { name: 'batch_size', label: 'Batch Size', type: 'number', value: '4', placeholder: '默认 4' },
                     { name: 'learning_rate', label: '学习率', value: '2e-5', placeholder: '默认 2e-5' }
                 ],
                 onSubmit: async (data) => {
+                    const parseGpuIds = (s) => {
+                        const txt = (s || '').trim();
+                        if (!txt) return null;
+                        return txt
+                            .split(',')
+                            .map(x => x.trim())
+                            .filter(x => x.length > 0)
+                            .map(x => parseInt(x, 10))
+                            .filter(n => Number.isFinite(n));
+                    };
+
                     const createData = {
                         name: data.name,
                         base_model_id: parseInt(data.model_id),
                         dataset_id: data.dataset_id ? parseInt(data.dataset_id) : null,
+                        gpu_ids: parseGpuIds(data.gpu_ids),
                         config_params: {
+                            training_type: data.training_type || 'SFT',
                             epochs: parseInt(data.epochs) || 3,
                             batch_size: parseInt(data.batch_size) || 4,
                             learning_rate: parseFloat(data.learning_rate) || 2e-5
@@ -1604,12 +1642,14 @@ const Pages = {
                                     <th>用户名</th>
                                     <th>邮箱</th>
                                     <th>管理员</th>
+                                    <th>可用GPU</th>
+                                    <th>任务类型</th>
                                     <th>创建时间</th>
                                     <th>操作</th>
                                 </tr>
                             </thead>
                             <tbody id="users-container">
-                                <tr><td colspan="6">${Components.loading('加载用户列表...')}</td></tr>
+                                <tr><td colspan="8">${Components.loading('加载用户列表...')}</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1625,13 +1665,81 @@ const Pages = {
                 const users = await API.users.list();
                 
                 if (users.length === 0) {
-                    document.getElementById('users-container').innerHTML = '<tr><td colspan="6" style="text-align:center">暂无用户</td></tr>';
+                    document.getElementById('users-container').innerHTML = '<tr><td colspan="8" style="text-align:center">暂无用户</td></tr>';
                 } else {
                     document.getElementById('users-container').innerHTML = users.map(u => Components.userCard(u)).join('');
                 }
             } catch (error) {
                 Utils.toast.error('加载用户失败: ' + error.message);
             }
+        },
+
+        async showPermissionsModal(userId) {
+            let user;
+            try {
+                const users = await API.users.list();
+                user = users.find(u => u.id === userId);
+            } catch (e) {
+                Utils.toast.error('获取用户信息失败');
+                return;
+            }
+
+            if (!user) {
+                Utils.toast.error('用户不存在');
+                return;
+            }
+
+            const defaultGpu = Array.isArray(user.allowed_gpu_ids) ? user.allowed_gpu_ids.join(',') : '';
+            const defaultTaskTypes = Array.isArray(user.allowed_task_types) ? user.allowed_task_types.join(',') : '';
+
+            Utils.modal.form({
+                title: `配置权限：${user.username}`,
+                fields: [
+                    {
+                        name: 'allowed_gpu_ids',
+                        label: '可用GPU编号',
+                        placeholder: '例如: 2,3 （留空表示不限制）',
+                        value: defaultGpu
+                    },
+                    {
+                        name: 'allowed_task_types',
+                        label: '可启动任务类型',
+                        placeholder: '例如: SFT,DPO （留空表示不限制）',
+                        value: defaultTaskTypes
+                    }
+                ],
+                onSubmit: async (data) => {
+                    const parseIntList = (s) => {
+                        const txt = (s || '').trim();
+                        if (!txt) return null;
+                        return txt
+                            .split(',')
+                            .map(x => x.trim())
+                            .filter(x => x.length > 0)
+                            .map(x => parseInt(x, 10))
+                            .filter(n => Number.isFinite(n));
+                    };
+
+                    const parseStrList = (s) => {
+                        const txt = (s || '').trim();
+                        if (!txt) return null;
+                        return txt
+                            .split(',')
+                            .map(x => x.trim())
+                            .filter(x => x.length > 0);
+                    };
+
+                    const payload = {
+                        allowed_gpu_ids: parseIntList(data.allowed_gpu_ids),
+                        allowed_task_types: parseStrList(data.allowed_task_types)
+                    };
+
+                    await API.users.updatePermissions(userId, payload);
+                    Utils.toast.success('权限已更新');
+                    this.loadUsers();
+                },
+                submitText: '保存'
+            });
         },
         
         showCreateModal() {

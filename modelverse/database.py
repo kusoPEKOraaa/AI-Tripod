@@ -479,7 +479,7 @@ def update_user_profile(user_id: int, profile_data: ProfileUpdate) -> User:
     conn.close()
     
     if user_data:
-        return User(**dict(user_data))
+        return User(**process_user_row(user_data))
     else:
         raise Exception("用户不存在")
 

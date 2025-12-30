@@ -70,9 +70,55 @@ def generate_training_config(task: TrainingTask) -> str:
     # 获取训练类型（默认为SFT）
     training_type = task.config_params.get("training_type", "SFT") if task.config_params else "SFT"
     
+    def _validate_local_safetensors(model_dir: Path) -> None:
+        """快速校验本地权重文件是否损坏。
+
+        目的：避免在训练过程中才因 safetensors 文件损坏/截断导致难以理解的报错。
+        """
+        try:
+            from safetensors import safe_open  # type: ignore
+        except Exception:
+            # 环境中未安装 safetensors 时跳过校验（oumi/transformers 仍可能在后续报错）
+            return
+
+        if not model_dir.exists() or not model_dir.is_dir():
+            return
+
+        # 跳过缓存目录，优先检查权重文件
+        safetensors_files = [
+            p
+            for p in model_dir.rglob("*.safetensors")
+            if ".cache" not in p.parts and p.is_file()
+        ]
+        if not safetensors_files:
+            return
+
+        for p in safetensors_files:
+            try:
+                with safe_open(str(p), framework="pt") as f:
+                    # 触发读取 header 即可
+                    _ = next(iter(f.keys()), None)
+            except Exception as e:
+                raise ValueError(
+                    f"检测到本地模型权重文件可能损坏: {p}。"
+                    f"请删除本地模型目录并重新下载后再训练。详细错误: {e}"
+                )
+
     # model部分
+    # 优先使用本地已下载的模型路径，避免在训练时触发 HuggingFace Hub（或镜像站）API 请求导致 429。
+    resolved_model_name = model_resource.repo_id
+    if getattr(model_resource, "local_path", None):
+        try:
+            local_model_path = Path(model_resource.local_path)
+            if local_model_path.exists():
+                _validate_local_safetensors(local_model_path)
+                resolved_model_name = str(local_model_path)
+        except Exception:
+            # 路径解析失败则回退到 repo_id
+            pass
+
     config["model"] = {
-        "model_name": model_resource.repo_id,
+        "model_name": resolved_model_name,
         "model_max_length": 2048,
         "torch_dtype_str": "bfloat16",
         "attn_implementation": "sdpa",
@@ -273,7 +319,9 @@ def generate_training_config(task: TrainingTask) -> str:
         if "training" in task.config_params:
             training_config = task.config_params["training"]
             for key, value in training_config.items():
-                if key != "output_dir":  # 不允许覆盖输出目录
+                # 不允许覆盖输出目录；cuda_visible_devices 不是 oumi TrainingParams 支持字段，
+                # GPU 选择应通过环境变量 CUDA_VISIBLE_DEVICES 控制（见 run_training）。
+                if key not in {"output_dir", "cuda_visible_devices"}:
                     config["training"][key] = value
         
         # 更新FSDP配置
@@ -324,6 +372,8 @@ def generate_training_config(task: TrainingTask) -> str:
     # 写入配置文件
     config_path = TRAINING_CONFIGS_DIR / f"{task.name}_config.yaml"
     try:
+        # task.name 可能包含路径分隔符（例如 "Qwen/Qwen3-0.6B"），写入前确保父目录存在
+        config_path.parent.mkdir(parents=True, exist_ok=True)
         with open(config_path, "w") as f:
             # 使用PyYAML的dump方法，不使用默认的字段排序
             yaml.dump(config, f, default_flow_style=False, sort_keys=False)

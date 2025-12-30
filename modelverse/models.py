@@ -7,6 +7,11 @@ class UserBase(BaseModel):
     username: str
     email: Optional[str] = None
     is_admin: bool = False
+    # 资源调度权限：管理员可配置普通用户可用 GPU 与可启动任务类型
+    # - allowed_gpu_ids: 允许使用的物理 GPU 编号列表（例如 [2,3]）
+    # - allowed_task_types: 允许启动的训练任务类型（例如 ["SFT"] 或 ["SFT","DPO"]）
+    allowed_gpu_ids: Optional[List[int]] = None
+    allowed_task_types: Optional[List[str]] = None
 
 class UserCreate(UserBase):
     password: str
@@ -21,6 +26,10 @@ class User(UserBase):
 
 class UserInDB(User):
     hashed_password: str
+
+class UserPermissionsUpdate(BaseModel):
+    allowed_gpu_ids: Optional[List[int]] = None
+    allowed_task_types: Optional[List[str]] = None
 
 class Token(BaseModel):
     access_token: str

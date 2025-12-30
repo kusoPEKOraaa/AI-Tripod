@@ -1,7 +1,10 @@
 """
 用于从 Hugging Face Hub 下载模型和数据集的工具
 特别适配huggingface_hub版本0.30.x，支持所有平台
-默认使用中国镜像站hf-mirror.com加速下载
+默认使用 Hugging Face 官网（https://huggingface.co）。
+
+如需使用镜像站，请显式设置环境变量，例如：
+    HF_ENDPOINT=https://hf-mirror.com
 """
 
 import os
@@ -67,13 +70,55 @@ def retest_connectivity_and_adjust() -> Tuple[str, bool]:
     logger.info(f"连通性重测结果: {new_endpoint} ({'镜像站' if new_is_mirror else '官方站'})")
     return new_endpoint, new_is_mirror
 
-# 动态选择最佳端点
-best_endpoint, is_using_mirror = get_best_endpoint()
-print(f"选择的端点: {best_endpoint} ({'镜像站' if is_using_mirror else '官方站'})")
+OFFICIAL_URL = "https://huggingface.co"
+MIRROR_URL = "https://hf-mirror.com"
 
-# 设置环境变量
-os.environ["HF_ENDPOINT"] = best_endpoint
-if is_using_mirror:
+def _normalize_endpoint(endpoint: str) -> str:
+    endpoint = (endpoint or "").strip()
+    if not endpoint:
+        return ""
+    # 兼容用户写成不带 scheme 的形式
+    if not endpoint.startswith("http://") and not endpoint.startswith("https://"):
+        endpoint = "https://" + endpoint
+    return endpoint.rstrip("/")
+
+def _is_mirror_endpoint(endpoint: str) -> bool:
+    try:
+        host = urlparse(endpoint).netloc.lower()
+    except Exception:
+        host = (endpoint or "").lower()
+    return "hf-mirror.com" in host
+
+def resolve_hf_endpoint() -> Tuple[str, bool, str]:
+    """解析 HuggingFace 端点。
+
+    优先级：
+    1) 用户环境变量 HF_ENDPOINT（或 HUGGINGFACE_HUB_ENDPOINT）
+    2) 若显式开启自动探测（MODELVERSE_AUTO_HF_ENDPOINT=1），则探测可用端点
+    3) 默认使用官网
+    """
+    env_endpoint = _normalize_endpoint(
+        os.environ.get("HF_ENDPOINT") or os.environ.get("HUGGINGFACE_HUB_ENDPOINT")
+    )
+    if env_endpoint:
+        return env_endpoint, _is_mirror_endpoint(env_endpoint), "env"
+
+    if os.environ.get("MODELVERSE_AUTO_HF_ENDPOINT") == "1":
+        endpoint, is_mirror = get_best_endpoint()
+        return _normalize_endpoint(endpoint), is_mirror, "auto"
+
+    return OFFICIAL_URL, False, "default"
+
+# 解析端点（默认官网；仅在用户显式配置或开启自动探测时才切换）
+best_endpoint, is_using_mirror, endpoint_source = resolve_hf_endpoint()
+print(
+    f"选择的端点: {best_endpoint} ({'镜像站' if is_using_mirror else '官方站'}; source={endpoint_source})"
+)
+
+# 仅在未设置 HF_ENDPOINT 时写入，避免覆盖用户显式配置
+if not os.environ.get("HF_ENDPOINT"):
+    os.environ["HF_ENDPOINT"] = best_endpoint
+if is_using_mirror and not os.environ.get("HF_MIRROR"):
     os.environ["HF_MIRROR"] = best_endpoint  # 兼容某些旧版本
 
 # 禁用hf_transfer，它可能会绕过镜像站

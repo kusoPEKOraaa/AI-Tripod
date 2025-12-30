@@ -293,14 +293,21 @@ const Components = {
     
     // =========== 用户卡片 ===========
     userCard(user) {
+        const gpuText = Array.isArray(user.allowed_gpu_ids) ? user.allowed_gpu_ids.join(',') : '-';
+        const taskTypesText = Array.isArray(user.allowed_task_types) ? user.allowed_task_types.join(',') : '-';
         return `
             <tr>
                 <td>${user.id}</td>
                 <td>${user.username}</td>
                 <td>${user.email || '-'}</td>
                 <td>${user.is_admin ? '<span style="color:var(--success)">是</span>' : '否'}</td>
+                <td>${gpuText}</td>
+                <td>${taskTypesText}</td>
                 <td>${Utils.format.date(user.created_at)}</td>
                 <td>
+                    <button class="btn btn-sm btn-outline" onclick="Pages.admin.showPermissionsModal(${user.id})">
+                        <span class="material-icons">tune</span>
+                    </button>
                     <button class="btn btn-sm btn-danger" onclick="Pages.admin.deleteUser(${user.id})" ${user.is_admin ? 'disabled' : ''}>
                         <span class="material-icons">delete</span>
                     </button>
