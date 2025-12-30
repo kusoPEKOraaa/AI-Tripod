@@ -1,0 +1,79 @@
+{
+  "note": "此文件为样例数据导出（仅用于作业提交展示），不是运行时必需文件；系统首次启动会自动创建SQLite库并生成默认管理员账号。",
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "email": "admin@example.com",
+      "display_name": "管理员",
+      "phone": "",
+      "is_admin": true,
+      "created_at": "2025-12-30T00:00:00"
+    }
+  ],
+  "resources": [
+    {
+      "id": 1,
+      "name": "Qwen2.5-0.5B-Instruct",
+      "description": "示例基础模型（Hugging Face Repo ID）",
+      "repo_id": "Qwen/Qwen2.5-0.5B-Instruct",
+      "resource_type": "model",
+      "user_id": 1,
+      "status": "completed",
+      "progress": 1.0,
+      "size_mb": 1024,
+      "local_path": "models/Qwen2.5-0.5B-Instruct"
+    },
+    {
+      "id": 2,
+      "name": "alpaca_zh_demo",
+      "description": "示例训练数据集（Hugging Face Dataset Repo ID）",
+      "repo_id": "tatsu-lab/alpaca",
+      "resource_type": "dataset",
+      "user_id": 1,
+      "status": "completed",
+      "progress": 1.0,
+      "size_mb": 50,
+      "local_path": "datasets/alpaca_zh_demo"
+    }
+  ],
+  "training_tasks": [
+    {
+      "id": 1,
+      "name": "demo-sft-lora",
+      "base_model_id": 1,
+      "dataset_id": 2,
+      "user_id": 1,
+      "status": "completed",
+      "progress": 1.0,
+      "config_path": "training_configs/demo.yaml",
+      "output_model_path": "trainedmodels/demo-sft-lora"
+    }
+  ],
+  "inference_tasks": [
+    {
+      "id": 1,
+      "name": "demo-inference",
+      "model_id": 1,
+      "user_id": 1,
+      "status": "running",
+      "port": 8000,
+      "api_base": "http://127.0.0.1:8000/v1"
+    }
+  ],
+  "evaluation_tasks": [
+    {
+      "id": 1,
+      "name": "demo-eval",
+      "model_id": 1,
+      "user_id": 1,
+      "benchmark_type": "mmlu",
+      "status": "completed",
+      "progress": 1.0,
+      "num_fewshot": 5,
+      "metrics": "{\"accuracy\":0.55}",
+      "result_path": "evaluation_results/demo-eval.json"
+    }
+  ]
+}
+
