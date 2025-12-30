@@ -93,9 +93,16 @@ pip install "protobuf>=6.32,<7" -i https://pypi.tuna.tsinghua.edu.cn/simple
 ### 4. 配置环境变量（可选，推荐国内用户）
 
 ```bash
-# 设置 HuggingFace 镜像
-export HF_ENDPOINT=https://hf-mirror.com
+# 默认不需要设置 HF_ENDPOINT（将使用 Hugging Face 官网 https://huggingface.co）
+# 如需使用镜像站加速（可选），再设置：
+# export HF_ENDPOINT=https://hf-mirror.com
+
+# 关闭 hf_transfer（某些场景可能绕过端点设置/导致异常）
 export HF_HUB_ENABLE_HF_TRANSFER=0
+
+# 如需切回官网（确保环境里没有残留镜像设置）：
+# unset HF_ENDPOINT
+# unset HF_MIRROR
 ```
 
 ### 5. 启动服务
@@ -229,8 +236,12 @@ pip install "protobuf>=6.32,<7"
 ### 4. HuggingFace 下载慢
 
 ```bash
-# 使用国内镜像
+# 使用国内镜像（可选）
 export HF_ENDPOINT=https://hf-mirror.com
+
+# 切回官网
+# unset HF_ENDPOINT
+# unset HF_MIRROR
 ```
 
 ### 5. WSL2 环境配置
@@ -328,7 +339,8 @@ server {
 
 ```bash
 # 创建 .env 文件
-HF_ENDPOINT=https://hf-mirror.com
+# 默认使用官网（建议不写 HF_ENDPOINT）
+# HF_ENDPOINT=https://hf-mirror.com  # 可选：镜像站
 HF_HUB_ENABLE_HF_TRANSFER=0
 ```
 
